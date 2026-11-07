@@ -1,1 +1,13 @@
-<!doctype html><meta charset="utf-8"><script>location.replace('overlay.html?widget=chat')</script>
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Squadding Quads Live Chat</title></head>
+<body>
+<script>
+  const destination = new URL("overlay.html", location.href);
+  const incoming = new URLSearchParams(location.search);
+  incoming.set("widget", "chat");
+  destination.search = incoming.toString();
+  location.replace(destination.href);
+</script>
+</body>
+</html>
