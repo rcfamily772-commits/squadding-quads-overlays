@@ -1,4 +1,4 @@
--- Squadding Quads | The Pack Lottery | preview 1.5
+-- Squadding Quads | The Pack Lottery | preview 1.6
 local levels = {"Beginner", "Intermediate", "Advanced", "OnlyDrones", "Bench Pilot", "Adults Only"}
 local decks = {
   {
@@ -85,6 +85,9 @@ local suits = {"B","I","A","OD","BP","18+"}
 local paper = lcd.RGB(248,242,224)
 local shadow = lcd.RGB(67,70,76)
 local muted = lcd.RGB(78,81,85)
+local rarityLabels = {"STD","RARE","LEG","MYTH"}
+local foil = {paper,lcd.RGB(212,222,231),lcd.RGB(247,213,130),lcd.RGB(220,205,249)}
+local foilEdge = {muted,lcd.RGB(116,143,173),lcd.RGB(171,119,25),lcd.RGB(116,63,174)}
 
 local options = {{"SFX", BOOL, 0}}
 local function update(w, opts)
@@ -118,12 +121,17 @@ local function draw(w)
     end
   end
   w.card = table.remove(bag)
+  w.seed = (25173*w.seed + 13849) % 65536
+  local roll = w.seed / 65536
+  w.rarity = roll < .01 and 4 or roll < .10 and 3 or roll < .30 and 2 or 1
   w.last[w.level] = w.card
   w.attempts = 1
   w.focus = 1
   w.message = nil
   w.dealAt = getTime()
   tone(w, 980, 70, 0, -5)
+  if w.rarity >= 3 then tone(w, 1320, 70, 15, 0) end
+  if w.rarity == 4 then tone(w, 1760, 85, 0, 0) end
 end
 
 local function choose(w, action)
@@ -203,13 +211,14 @@ local function refresh(w,event,touch)
     lcd.drawText(x+floor(cw/2),y+floor(ch/2)-14,"SQ",CENTER+MIDSIZE+cream)
     lcd.drawText(x+floor(cw/2),y+floor(ch/2)+14,"DEALING...",CENTER+SMLSIZE+cream)
   else
-    lcd.drawFilledRectangle(x,y,cw,ch,paper)
+    local tier = w.card and w.rarity or 1
+    lcd.drawFilledRectangle(x,y,cw,ch,foil[tier])
     lcd.drawRectangle(x,y,cw,ch,accent)
-    lcd.drawRectangle(x+3,y+3,cw-6,ch-6,accent)
+    lcd.drawRectangle(x+3,y+3,cw-6,ch-6,tier > 1 and foilEdge[tier] or accent)
     local card = w.card and decks[w.level][w.card]
     local label = levels[w.level]
     lcd.drawText(x+10,y+7,suits[w.level].."  "..label,SMLSIZE+accent)
-    if card then lcd.drawText(x+cw-10,y+7,"TRY "..w.attempts,RIGHT+SMLSIZE+muted) end
+    if card then lcd.drawText(x+cw-10,y+7,rarityLabels[tier].." / "..w.attempts,RIGHT+SMLSIZE+foilEdge[tier]) end
     lcd.drawFilledRectangle(x+10,y+27,cw-20,1,accent)
     local title = card and card[1] or (w.message and "Landed it!" or "Draw a card")
     local titleFont = MIDSIZE

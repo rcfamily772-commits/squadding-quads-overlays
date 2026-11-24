@@ -5,7 +5,7 @@ const SQSfx=(()=>{
   let enabled=true, ctx=null, master=null, bank={}, pending=new Set();
   try {enabled=localStorage.getItem(key)!=='off';}catch{}
   const rate=24000;
-  const durations={shuffle:.31,deal:.26,tap:.09,retry:.22,win:.67,level:.10};
+  const durations={shuffle:.31,deal:.26,tap:.09,retry:.22,win:.67,level:.10,rare:.32,legendary:.58,mythical:.8};
   const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
   function make(name){
     const out=new Float32Array(Math.ceil(rate*durations[name]));
@@ -36,6 +36,9 @@ const SQSfx=(()=>{
     if(name==='retry'){note(0,.12,410,320,.18);note(.095,.11,440,440,.13,'bell');}
     if(name==='win'){for(const [i,f] of [523.25,659.25,783.99,1046.5].entries())note(i*.105,.31,f,f,.16,'bell');}
     if(name==='level'){note(0,.09,660,570,.12);addNoise(0,.04,.08,3);}
+    if(name==='rare'){note(0,.28,880,880,.14,'bell');note(.06,.24,1320,1320,.11,'bell');}
+    if(name==='legendary'){[523.25,783.99,1046.5].forEach((f,i)=>note(i*.095,.37,f,f,.15,'bell'));}
+    if(name==='mythical'){[523.25,659.25,783.99,1046.5,1567.98].forEach((f,i)=>note(i*.09,.39,f,f,.12,'bell'));}
     let peak=0;for(const x of out)peak=Math.max(peak,Math.abs(x));
     const gain=peak>.66?.66/peak:1;for(let i=0;i<out.length;i++)out[i]=clamp(out[i]*gain,-1,1);
     return out;
