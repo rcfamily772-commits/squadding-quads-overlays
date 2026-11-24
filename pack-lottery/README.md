@@ -2,13 +2,22 @@
 
 **What are you flying this pack?** Draw a freestyle challenge on your EdgeTX radio before take-off. After landing, log the win, give it another go or deal yourself a fresh card.
 
-**[Download The Pack Lottery v1.4 (ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/pack-lottery/SQ_Pack_Lottery_v1.4.zip)**
+**[Download The Pack Lottery v1.5 (ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/pack-lottery/SQ_Pack_Lottery_v1.5.zip)**
 
-[Official v1.4 website](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/v1.4/)
+[Official v1.5 website](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/v1.5/)
 
 [Original v1.0 ZIP](SQ_Pack_Lottery_v1.zip) · [Previous v1.1 ZIP](SQ_Pack_Lottery_v1.1.zip) · [Previous v1.2 ZIP](SQ_Pack_Lottery_v1.2.zip) · [v1.2 page](v1.2/)
 
-## New in v1.4
+## New in v1.5
+
+- Original procedural audio: papery shuffle, card slide and tap, retry cue, deck switch and victory chime. No third-party recordings or audio downloads.
+- Sounds start only after interaction; the browser mute setting persists locally. Unsupported audio falls back to silent play.
+- Optional normal-priority EdgeTX tones using radio beep volume. Enable SFX in widget settings; defaults off. No additional files or global audio settings to change.
+- Radio sound is a simpler tone version, not the browser foley. The test bench remains visual-only for radio audio.
+
+[Previous v1.4 ZIP](SQ_Pack_Lottery_v1.4.zip) · [v1.4 website](v1.4/)
+
+## Retained from v1.4
 
 - Premium playing-card layout, stacked card backs and six deck accents.
 - Animated deal, redraw, retry and completion in the browser; reduced-motion preference respected.
@@ -48,6 +57,6 @@ Hold **Return** to leave full screen. The home-screen tile shows your current ca
 
 ## Compatibility and feedback
 
-**Field preview 1.4** targets colour-screen EdgeTX radios with a display of 320 × 240 or larger. The original shuffle, scoring, retries and touch/key paths have been exercised with simulated inputs. The redesigned radio interface and deal animation still need physical-radio testing.
+**Field preview 1.5** targets colour-screen EdgeTX radios with a display of 320 × 240 or larger. The original shuffle, scoring, retries and touch/key paths have been exercised with simulated inputs. The redesigned radio interface, animation and optional sound still need physical-radio testing.
 
 Trying it on your radio? Tell Squadding Quads the radio model, EdgeTX version, whether you used touch or buttons, and which card you drew. A photo helps us fix any text that gets cut off.

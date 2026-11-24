@@ -7,6 +7,11 @@ let busy=false;
 const controls=()=>[...levels,...['draw','landed','retry','redraw','reset'].map(el)];
 function setBusy(value){busy=value;controls().forEach(b=>b.disabled=value);}
 const face=()=>el('challenge-card');
+const sound=typeof SQSfx!=='undefined'?SQSfx:null;
+function sfx(name){if(sound)sound.play(name);}
+function syncSound(){const b=el('sound');b.textContent=sound&&sound.enabled?'Sound: on':'Sound: off';b.setAttribute('aria-pressed',String(!!(sound&&sound.enabled)));if(!sound)b.disabled=true;}
+el('sound').onclick=()=>{if(sound){sound.set(!sound.enabled);syncSound();}};
+syncSound();
 function motion(name,ms){const card=face();card.classList.remove('deal-in','deal-out','win-out','retry');if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)return Promise.resolve();void card.offsetWidth;card.classList.add(name);return new Promise(resolve=>setTimeout(()=>{card.classList.remove(name);resolve();},ms));}
 function fresh() {
   return {level:0, bags:decks.map(()=>[]), last:decks.map(()=>null), card:null, tries:0, total:0, complete:''};
@@ -63,13 +68,13 @@ function drawCard() {
   state.complete = '';
   save();
 }
-async function deal(){if(busy)return;setBusy(true);try{await motion('deal-out',180);drawCard();await motion('deal-in',420);}finally{setBusy(false);el('landed').focus();}}
+async function deal(){if(busy)return;setBusy(true);try{if(sound)sound.unlock();sfx(state.bags[state.level].length?'tap':'shuffle');await motion('deal-out',180);drawCard();sfx('deal');await motion('deal-in',420);}finally{setBusy(false);el('landed').focus();}}
 el('draw').onclick = el('redraw').onclick = deal;
-el('retry').onclick = async () => { if(busy)return;setBusy(true);try{state.tries++;save();await motion('retry',240);}finally{setBusy(false);} };
+el('retry').onclick = async () => { if(busy)return;setBusy(true);try{sfx('retry');state.tries++;save();await motion('retry',240);}finally{setBusy(false);} };
 el('landed').onclick = async () => {
   if (busy || state.card === null) return;
   setBusy(true);
-  try{await motion('win-out',250);
+  try{sfx('win');await motion('win-out',250);
   state.complete = decks[state.level][state.card][0];
   state.total++;
   state.card = null;
@@ -80,6 +85,7 @@ el('landed').onclick = async () => {
 levels.forEach((button,i) => button.onclick = () => {
   if (busy || i === state.level) return;
   if (i === 5 && !confirm('Adults Only contains strong language. Continue?')) return;
+  sfx('level');
   state.level = i;
   state.card = null;
   state.complete = '';
@@ -88,6 +94,7 @@ levels.forEach((button,i) => button.onclick = () => {
 el('reset').onclick = () => {
   if (busy) return;
   if (confirm('Start a new session and clear this tally and deck progress?')) {
+    sfx('tap');
     state = fresh();
     save();
   }

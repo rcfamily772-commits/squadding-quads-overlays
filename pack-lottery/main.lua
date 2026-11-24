@@ -1,4 +1,4 @@
--- Squadding Quads | The Pack Lottery | preview 1.4
+-- Squadding Quads | The Pack Lottery | preview 1.5
 local levels = {"Beginner", "Intermediate", "Advanced", "OnlyDrones", "Bench Pilot", "Adults Only"}
 local decks = {
   {
@@ -86,14 +86,25 @@ local paper = lcd.RGB(248,242,224)
 local shadow = lcd.RGB(67,70,76)
 local muted = lcd.RGB(78,81,85)
 
-local function create(zone)
-  return {zone=zone, level=1, bags={{},{},{},{},{},{}}, last={}, focus=1,
+local options = {{"SFX", BOOL, 0}}
+local function update(w, opts)
+  w.sound = opts and opts.SFX == 1 or false
+end
+local function tone(w, freq, duration, pause, sweep)
+  -- Optional normal-priority sound, never PLAY_NOW; use radio beep volume.
+  if w.sound and type(playTone) == "function" then
+    pcall(playTone, freq, duration, pause, 0, sweep or 0)
+  end
+end
+local function create(zone, opts)
+  return {zone=zone, sound=opts and opts.SFX == 1 or false, level=1, bags={{},{},{},{},{},{}}, last={}, focus=1,
           landed=0, attempts=0, seed=0}
 end
 
 local function draw(w)
   local bag, deck = w.bags[w.level], decks[w.level]
   if #bag == 0 then
+    tone(w, 740, 65, 25, -3)
     -- Mix in the time of the draw. Keep RNG state private to this instance.
     w.seed = (w.seed + getTime()) % 65536
     for i=1,#deck do bag[i]=i end
@@ -112,18 +123,23 @@ local function draw(w)
   w.focus = 1
   w.message = nil
   w.dealAt = getTime()
+  tone(w, 980, 70, 0, -5)
 end
 
 local function choose(w, action)
   if action == "Level" then
     w.level = w.level % #levels + 1
     w.card,w.message,w.focus,w.dealAt = nil,nil,2,nil
+    tone(w, 650, 45, 0, 0)
   elseif action == "Try again" then
     w.attempts = w.attempts + 1
+    tone(w, 450, 80, 0, -2)
   elseif action == "Landed it" then
     w.landed = w.landed + 1
     w.message = decks[w.level][w.card][1] .. " complete."
     w.card,w.focus,w.dealAt = nil,1,nil
+    tone(w, 660, 70, 20, 0)
+    tone(w, 880, 100, 0, 0)
   else
     draw(w)
   end
@@ -212,4 +228,4 @@ local function refresh(w,event,touch)
   end
 end
 
-return {name="SQLotto", create=create, refresh=refresh}
+return {name="SQLotto", options=options, create=create, update=update, refresh=refresh}
