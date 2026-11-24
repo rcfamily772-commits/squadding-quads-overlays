@@ -13,8 +13,10 @@ self.onmessage = ({data}) => {
     if (data.source !== undefined) {
       const init = fengari.load(data.adapter,'@adapter.lua')();
       const images=data.images || [];
-      let state=data.last;
+      let state=data.last;const lipo=data.lipoFiles||{};
       function assets(op,path,index) {
+        if(op==='lipoState')return lipo[path];
+        if(op==='lipoSave'){lipo[path]=String(index).slice(0,2048);self.postMessage({lipoFiles:lipo});return;}
         if(op==='clock')return data.epoch+Math.floor((performance.now()-start)/1000);
         if(op==='state')return state || undefined;
         if(op==='save'){state=String(path).slice(0,300);self.postMessage({saved:state});return;}

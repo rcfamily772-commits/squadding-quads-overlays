@@ -2,10 +2,12 @@
 const byId = id => document.getElementById(id);
 const canvas = byId('lcd'), ctx = canvas.getContext('2d');
 let worker, deadline, timer, source, adapter, filename, generation=0, busy=false, pending=[];
+let lipoFiles={};
 let images=new Map(), epoch=Math.floor(Date.now()/1000), last='';
 const wallpaperRoot='../../wallpaper-shuffle/';
 const stock=['workshop.png','manc.png','karen.png','dealer.png'];
 const wallMode=new URLSearchParams(location.search).has('wallpaper');
+const lipoMode=new URLSearchParams(location.search).has('lipo');
 const show = text => { byId('status').textContent=text; };
 function stop(){
   if(worker) worker.terminate();
@@ -68,19 +70,20 @@ function run(){
   const [width,height]=byId('size').value.split('×').map(Number);
   const tile=byId('view').selectedIndex===1;
   canvas.width=tile?Math.floor(width/2):width;canvas.height=tile?Math.floor(height/2):height;
-  worker=new Worker('worker.js');show('Starting '+filename+'…');
+  worker=new Worker('worker.js?v=lipo1');show('Starting '+filename+'…');
   let first=true;
   worker.onerror=e=>fail(e.message||'Lua engine could not start.');
   worker.onmessage=({data})=>{
+    if(data.lipoFiles){lipoFiles=data.lipoFiles;return;}
     if(typeof data.saved==='string'){last=data.saved;return;}
     clearTimeout(deadline);busy=false;
     if(data.error){fail(data.error);return;}
     try{data.commands.forEach(paint);}catch(err){fail(String(err));return;}
-    if(first){show(filename+' · '+(tile?'Tile preview':'Running'));first=false;}
+    if(first){show(filename+' · '+(tile?'Tile preview':'Running')+(filename==='LiPo Butler'?' · synthetic 23.4 V':''));first=false;}
     if(pending.length)send(pending.shift());
     else timer=setTimeout(()=>send({event:0}),120);
   };
-  send({source,adapter,width,height,tile,epoch,last,images:[...images].map(([name,im])=>({name,width:im.naturalWidth,height:im.naturalHeight}))});
+  send({source,adapter,width,height,tile,epoch,last,lipoFiles,images:[...images].map(([name,im])=>({name,width:im.naturalWidth,height:im.naturalHeight}))});
 }
 function input(event,x,y){
   if(!worker||byId('view').selectedIndex)return;
@@ -98,18 +101,18 @@ document.onkeydown=e=>{
   if(k){e.preventDefault();input(k);}
 };
 async function read(url){const r=await fetch(url);if(!r.ok)throw Error('Could not load '+url);return r.text();}
-async function load(file,wall=false){
+async function load(file,wall=false,lipo=false){
   const ticket=++generation;stop();source=null;
   try{
     if(file && file.size>512*1024)throw Error('Choose a Lua file under 512 KB.');
-    const [code,shim]=await Promise.all([file?file.text():read(wall?wallpaperRoot+'WIDGETS/SQWall/main.lua':'../main.lua'),adapter||read('runtime.lua')]);
+    const [code,shim]=await Promise.all([file?file.text():read(lipo?'../../lipo-butler/WIDGETS/SQLiPo/main.lua':wall?wallpaperRoot+'WIDGETS/SQWall/main.lua':'../main.lua'),adapter||read('runtime.lua?v=lipo1')]);
     if(wall && !images.size){
       const entries=await Promise.all(stock.map(async name=>[name,await decodeImage(wallpaperRoot+'IMAGES/SQWALL/'+name)]));
       if(ticket!==generation)return;
       images=new Map(entries);
     }
     if(ticket!==generation)return;
-    source=code;adapter=shim;filename=file?file.name:(wall?'SQ Wallpaper Shuffle':'Pack Lottery');run();
+    source=code;adapter=shim;filename=file?file.name:(lipo?'LiPo Butler':wall?'SQ Wallpaper Shuffle':'Pack Lottery');run();
   }catch(err){if(ticket===generation)fail(String(err));}
 }
 byId('file').onchange=e=>{if(e.target.files[0])load(e.target.files[0]);};
@@ -137,4 +140,5 @@ byId('images').onchange=e=>importImages(e.target.files);
 byId('folder').onchange=e=>importImages(e.target.files);
 byId('wall').onclick=()=>{imageImport++;images=new Map();last='';load(null,true);};
 byId('power').onclick=()=>{epoch=Math.max(epoch+3,Math.floor(Date.now()/1000));run();};
-load(null,wallMode);
+byId('lipo').onclick=()=>load(null,false,true);
+load(null,wallMode&&!lipoMode,lipoMode);

@@ -40,6 +40,7 @@ return function(_, source, width, height, tile, emit, ticks, assets)
     return math.ceil(#s*size*.55),size
   end
   local albumFiles={}
+  env.getSourceValue=function(name) if name=='VFAS' then return 23.4,true,true end return nil,false,false end
   if assets then
     env.getRtcTime=function() return assets(nil,'clock') end
     env.dir=function(path)
@@ -59,13 +60,15 @@ return function(_, source, width, height, tile, emit, ticks, assets)
     env.io={}
     function env.io.open(path,mode)
       local album=path=='/WIDGETS/SQLotto/album-a.txt' or path=='/WIDGETS/SQLotto/album-b.txt'
-      if not album and path~='/WIDGETS/SQWall/last.txt' then return end
-      local body=album and albumFiles[path] or (not album and assets(nil,'state'))
-      if mode=='w' or (mode=='r' and body) then return {mode=mode,body=mode=='w' and '' or body,path=path,album=album} end
+      local lipo=path=='/WIDGETS/SQLiPo/packs-a.txt' or path=='/WIDGETS/SQLiPo/packs-b.txt'
+      if not album and not lipo and path~='/WIDGETS/SQWall/last.txt' then return end
+      local body
+      if lipo then body=assets(nil,'lipoState',path) elseif album then body=albumFiles[path] else body=assets(nil,'state') end
+      if mode=='w' or (mode=='r' and body) then return {mode=mode,body=mode=='w' and '' or body,path=path,album=album,lipo=lipo} end
     end
     function env.io.read(f,n) return string.sub(f.body,1,n) end
-    function env.io.write(f,s) f.body=string.sub(f.body..s,1,300) end
-    function env.io.close(f) if f.mode=='w' then if f.album then albumFiles[f.path]=f.body else assets(nil,'save',f.body) end end end
+    function env.io.write(f,s) f.body=string.sub(f.body..s,1,f.lipo and 2048 or 300) end
+    function env.io.close(f) if f.mode=='w' then if f.lipo then assets(nil,'lipoSave',f.path,f.body) elseif f.album then albumFiles[f.path]=f.body else assets(nil,'save',f.body) end end end
   end
   local chunk=assert(load(source,'@main.lua','t',env))
   local api=chunk()
