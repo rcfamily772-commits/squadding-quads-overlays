@@ -1,4 +1,4 @@
--- Squadding Quads | The Pack Lottery | preview 1.3
+-- Squadding Quads | The Pack Lottery | preview 1.4
 local levels = {"Beginner", "Intermediate", "Advanced", "OnlyDrones", "Bench Pilot", "Adults Only"}
 local decks = {
   {
@@ -80,6 +80,11 @@ local amber = lcd.RGB(255,193,72)
 local ready = {"Draw", "Level"}
 local active = {"Landed it", "Try again", "Redraw", "Level"}
 local floor = math.floor
+local accents = {lcd.RGB(37,108,72),lcd.RGB(26,92,146),lcd.RGB(122,65,155),lcd.RGB(159,97,14),lcd.RGB(92,106,49),lcd.RGB(167,35,47)}
+local suits = {"B","I","A","OD","BP","18+"}
+local paper = lcd.RGB(248,242,224)
+local shadow = lcd.RGB(67,70,76)
+local muted = lcd.RGB(78,81,85)
 
 local function create(zone)
   return {zone=zone, level=1, bags={{},{},{},{},{},{}}, last={}, focus=1,
@@ -106,18 +111,19 @@ local function draw(w)
   w.attempts = 1
   w.focus = 1
   w.message = nil
+  w.dealAt = getTime()
 end
 
 local function choose(w, action)
   if action == "Level" then
     w.level = w.level % #levels + 1
-    w.card,w.message,w.focus = nil,nil,2
+    w.card,w.message,w.focus,w.dealAt = nil,nil,2,nil
   elseif action == "Try again" then
     w.attempts = w.attempts + 1
   elseif action == "Landed it" then
     w.landed = w.landed + 1
     w.message = decks[w.level][w.card][1] .. " complete."
-    w.card,w.focus = nil,1
+    w.card,w.focus,w.dealAt = nil,1,nil
   else
     draw(w)
   end
@@ -142,7 +148,11 @@ local function refresh(w,event,touch)
   local by = height-bh-pad
   local actions = w.card and active or ready
   local slot = floor((width-2*pad)/#actions)
-  if event == EVT_VIRTUAL_NEXT then
+  local dealing = w.dealAt and getTime()-w.dealAt < 24 and getTime()-w.dealAt >= 0
+  if not dealing then w.dealAt = nil end
+  if dealing then
+    -- A short non-blocking deal animation; ignore repeated button presses.
+  elseif event == EVT_VIRTUAL_NEXT then
     w.focus = w.focus % #actions + 1
   elseif event == EVT_VIRTUAL_PREV then
     w.focus = (w.focus-2) % #actions + 1
@@ -158,20 +168,41 @@ local function refresh(w,event,touch)
   actions = w.card and active or ready
   slot = floor((width-2*pad)/#actions)
   lcd.drawFilledRectangle(0,0,width,height,ink)
-  lcd.drawText(pad,4,"SQUADDING QUADS",SMLSIZE+amber)
-  lcd.drawText(width-pad,4,"LANDED  "..w.landed,RIGHT+SMLSIZE+cream)
-  lcd.drawFilledRectangle(pad,28,width-2*pad,2,amber)
-  local card = w.card and decks[w.level][w.card]
-  local label = levels[w.level]
-  if card then label = label.."   /   ATTEMPT "..w.attempts end
-  lcd.drawText(pad,35,label,SMLSIZE+amber)
-  local title = card and card[1] or "The Pack Lottery"
-  local titleFont = width >= 300 and MIDSIZE or 0
-  if lcd.sizeText(title,titleFont) > width-2*pad then titleFont = 0 end
-  lcd.drawText(pad,57,title,titleFont+cream)
-  local body = card and card[2] or w.message or (w.level == 4 and "One challenge. No tricks required. Draw a message and just fly when it is safe." or w.level == 5 and "Finish your safety checks, leave the bench and fly when conditions are safe." or w.level == 6 and "ADULTS ONLY: strong language. Draw to reveal. Fly only when safe." or "Choose your level, then draw a challenge for this pack.")
-  local bodyY = width >= 300 and 95 or 86
-  lcd.drawTextLines(pad,bodyY,width-2*pad,by-bodyY-4,body,cream)
+  lcd.drawText(pad,3,"SQ / PACK LOTTERY",SMLSIZE+amber)
+  lcd.drawText(width-pad,3,"LANDED "..w.landed,RIGHT+SMLSIZE+cream)
+  local x,y,cw,ch = 14,28,width-32,by-38
+  local accent = accents[w.level]
+  -- Offset card backs, with a contrasting inset like a real deck.
+  lcd.drawFilledRectangle(x+8,y+6,cw,ch,shadow)
+  lcd.drawFilledRectangle(x+5,y+3,cw,ch,accent)
+  lcd.drawRectangle(x+9,y+7,cw-8,ch-8,cream)
+  local elapsed = w.dealAt and getTime()-w.dealAt or 24
+  local moving = elapsed >= 0 and elapsed < 24
+  if moving then
+    local shift = floor((24-elapsed)*math.min(38,floor(width/9))/24)
+    x = x + shift
+    lcd.drawFilledRectangle(x,y,cw,ch,paper)
+    lcd.drawFilledRectangle(x+4,y+4,cw-8,ch-8,accent)
+    lcd.drawRectangle(x+9,y+9,cw-18,ch-18,cream)
+    lcd.drawText(x+floor(cw/2),y+floor(ch/2)-14,"SQ",CENTER+MIDSIZE+cream)
+    lcd.drawText(x+floor(cw/2),y+floor(ch/2)+14,"DEALING...",CENTER+SMLSIZE+cream)
+  else
+    lcd.drawFilledRectangle(x,y,cw,ch,paper)
+    lcd.drawRectangle(x,y,cw,ch,accent)
+    lcd.drawRectangle(x+3,y+3,cw-6,ch-6,accent)
+    local card = w.card and decks[w.level][w.card]
+    local label = levels[w.level]
+    lcd.drawText(x+10,y+7,suits[w.level].."  "..label,SMLSIZE+accent)
+    if card then lcd.drawText(x+cw-10,y+7,"TRY "..w.attempts,RIGHT+SMLSIZE+muted) end
+    lcd.drawFilledRectangle(x+10,y+27,cw-20,1,accent)
+    local title = card and card[1] or (w.message and "Landed it!" or "Draw a card")
+    local titleFont = MIDSIZE
+    if lcd.sizeText(title,titleFont) > cw-20 then titleFont = 0 end
+    lcd.drawText(x+10,y+34,title,titleFont+ink)
+    local body = card and card[2] or w.message or (w.level == 4 and "One challenge. No tricks. Just fly when it is safe." or w.level == 5 and "Finish your checks, leave the bench and fly when safe." or w.level == 6 and "ADULTS ONLY: strong language. Draw to reveal. Fly only when safe." or "Choose your level, then draw a challenge for this pack.")
+    local bodyY = y+68
+    lcd.drawTextLines(x+10,bodyY,cw-20,ch-74,body,SMLSIZE+ink)
+  end
   for i,action in ipairs(actions) do
     local x = pad+(i-1)*slot
     local selected = i==w.focus
