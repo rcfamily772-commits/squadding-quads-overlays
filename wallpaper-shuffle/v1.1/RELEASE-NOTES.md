@@ -1,5 +1,7 @@
 # SQ Wallpaper Shuffle v1.1
 
+[Download the complete v1.1 ZIP](https://github.com/rcfamily772-commits/squadding-quads-overlays/releases/download/SQwall/SQWall-v1.1.zip) · [GitHub release](https://github.com/rcfamily772-commits/squadding-quads-overlays/releases/tag/SQwall)
+
 Expanded Squadding Quads wallpaper pack for colour EdgeTX radios.
 
 ## What's new
