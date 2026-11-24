@@ -1,5 +1,5 @@
--- Squadding Quads | The Pack Lottery | preview 1.0
-local levels = {"Beginner", "Intermediate", "Advanced"}
+-- Squadding Quads | The Pack Lottery | preview 1.1
+local levels = {"Beginner", "Intermediate", "Advanced", "OnlyDrones"}
 local decks = {
   {
     {"Figure of eight", "Circle two markers in an eight. Cross the middle at the same height on both passes."},
@@ -28,6 +28,20 @@ local decks = {
     {"Pause the roll", "At recovery height, fly a four-point roll. Make the pauses equal on your DVR."},
     {"One-take line", "Combine an orbit, a roll and a loop in one shot. Give each move a deliberate exit."},
     {"The other hand", "Choose your strongest freestyle line. Fly its mirror twice with the same timing."}
+  },
+  {
+    {"Just Fly", "Come on, please fly. Pretty please?"},
+    {"Just Fly", "Squadding Quads will beat you... in the pack tally if you don't fly!"},
+    {"Just Fly", "Does the day end with a Y? Then fly!"},
+    {"Just Fly", "Your batteries didn't charge themselves for a day on the sofa."},
+    {"Just Fly", "Less scrolling, more rolling."},
+    {"Just Fly", "The Angry Karen can wait. If it's safe to fly, get a pack in!"},
+    {"Just Fly", "BoyWonder has probably flown three packs already. Just saying."},
+    {"Just Fly", "Your drone is not a particularly expensive paperweight."},
+    {"Just Fly", "No tricks. No pressure. Just you and the sticks."},
+    {"Just Fly", "One... More... Pack...!"},
+    {"Just Fly", "We don't fly spreadsheets. Get those props turning!"},
+    {"Just Fly", "The only challenge today is to enjoy yourself. Go fly when it's safe."}
   }
 }
 
@@ -40,7 +54,7 @@ local active = {"Landed it", "Try again", "Redraw", "Level"}
 local floor = math.floor
 
 local function create(zone)
-  return {zone=zone, level=1, bags={{},{},{}}, last={}, focus=1,
+  return {zone=zone, level=1, bags={{},{},{},{}}, last={}, focus=1,
           landed=0, attempts=0, seed=0}
 end
 
@@ -126,7 +140,7 @@ local function refresh(w,event,touch)
   local title = card and card[1] or "The Pack Lottery"
   local titleFont = width >= 300 and MIDSIZE or 0
   lcd.drawText(pad,57,title,titleFont+cream)
-  local body = card and card[2] or w.message or "Choose your level, then draw a challenge for this pack."
+  local body = card and card[2] or w.message or (w.level == 4 and "One challenge. No tricks required. Draw a message and just fly when it is safe." or "Choose your level, then draw a challenge for this pack.")
   local bodyY = width >= 300 and 95 or 86
   lcd.drawTextLines(pad,bodyY,width-2*pad,by-bodyY-4,body,cream)
   for i,action in ipairs(actions) do

@@ -3,28 +3,29 @@ const key = 'sq.pack-lottery.session.v1';
 const el = id => document.getElementById(id);
 const levels = Array.from(document.querySelectorAll('nav button'));
 function fresh() {
-  return {level:0, bags:[[],[],[]], last:[null,null,null], card:null, tries:0, total:0, complete:''};
+  return {level:0, bags:decks.map(()=>[]), last:decks.map(()=>null), card:null, tries:0, total:0, complete:''};
 }
-const index = n => Number.isInteger(n) && n >= 0 && n < 8;
+const index = (n, level) => Number.isInteger(n) && n >= 0 && n < decks[level].length;
 function valid(s) {
   return s && Number.isInteger(s.level) && levels[s.level] &&
-    Array.isArray(s.bags) && s.bags.length === 3 && s.bags.every(b => Array.isArray(b) && b.length <= 8 && b.every(index) && new Set(b).size === b.length) &&
-    Array.isArray(s.last) && s.last.length === 3 && s.last.every(n => n === null || index(n)) &&
-    (s.card === null || index(s.card)) && Number.isSafeInteger(s.tries) && s.tries >= 0 &&
+    Array.isArray(s.bags) && s.bags.length === decks.length && s.bags.every((b,i) => Array.isArray(b) && b.length <= decks[i].length && b.every(n=>index(n,i)) && new Set(b).size === b.length) &&
+    Array.isArray(s.last) && s.last.length === decks.length && s.last.every((n,i) => n === null || index(n,i)) &&
+    (s.card === null || index(s.card,s.level)) && Number.isSafeInteger(s.tries) && s.tries >= 0 &&
     Number.isSafeInteger(s.total) && s.total >= 0 && typeof s.complete === 'string';
 }
 let state = fresh();
 try {
   const stored = JSON.parse(localStorage.getItem(key));
+  if (stored && Array.isArray(stored.bags) && stored.bags.length===3 && Array.isArray(stored.last) && stored.last.length===3) { stored.bags.push([]); stored.last.push(null); }
   if (valid(stored)) state = stored;
 } catch {}
 function render() {
   const {level,card,tries,total,complete} = state;
   const active = card !== null;
   el('level').textContent = levels[level].textContent+' deck';
-  el('attempt').textContent = active ? 'Attempt '+tries : '8 challenges';
+  el('attempt').textContent = active ? 'Attempt '+tries : level===3 ? '1 challenge · 12 messages' : decks[level].length+' challenges';
   el('title').textContent = active ? decks[level][card][0] : complete ? 'Landed it.' : 'Your next pack';
-  el('brief').textContent = active ? decks[level][card][1] : complete ? complete+' complete. Ready for another draw?' : 'Draw a card before take-off to see your challenge.';
+  el('brief').textContent = active ? decks[level][card][1] : complete ? complete+' complete. Ready for another draw?' : level===3 ? 'No tricks. No pressure. Just fly when it is safe.' : 'Draw a card before take-off to see your challenge.';
   el('total').textContent = total+' landed this session';
   levels.forEach((b,i) => b.setAttribute('aria-pressed',i===level));
   el('draw').hidden = active;

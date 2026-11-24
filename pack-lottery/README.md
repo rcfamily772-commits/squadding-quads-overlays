@@ -2,7 +2,9 @@
 
 **What are you flying this pack?** Draw a freestyle challenge on your EdgeTX radio before take-off. After landing, log the win, give it another go or deal yourself a fresh card.
 
-**[Download The Pack Lottery v1.0 (ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/pack-lottery/SQ_Pack_Lottery_v1.zip)**
+**[Download The Pack Lottery v1.1 (ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/pack-lottery/SQ_Pack_Lottery_v1.1.zip)
+
+[Original v1.0 ZIP](SQ_Pack_Lottery_v1.zip)**
 
 ## Inside the deck
 
@@ -12,7 +14,9 @@
 | Intermediate | 8 | **Mirror rolls** · Roll left, then right at recovery height. Finish each roll on your original heading. |
 | Advanced | 8 | **BoyWonder mirror** · Build a three-trick line and reverse every roll direction on the second run. |
 
-Each deck deals all eight cards before it shuffles again. Switching levels remembers which cards you’ve drawn in each deck for the current session.
+| OnlyDrones | 1 challenge / 12 messages | **Just Fly** · No tricks, no pressure. Go fly when conditions are safe. |
+
+Each skill deck deals all eight cards before it shuffles again. OnlyDrones cycles through twelve humorous messages without repeats within a shuffle; every message is the same Just Fly challenge. Switching levels remembers which cards you’ve drawn in each deck for the current session.
 
 ## Get it on your radio
 
@@ -32,6 +36,6 @@ Hold **Return** to leave full screen. The home-screen tile shows your current ca
 
 ## Compatibility and feedback
 
-**Field preview 1.0** targets colour-screen EdgeTX radios with a display of 320 × 240 or larger. The shuffle, scoring, retries and touch/key paths have been exercised with simulated inputs. Physical-radio compatibility still needs bench testing.
+**Field preview 1.1** targets colour-screen EdgeTX radios with a display of 320 × 240 or larger. The shuffle, scoring, retries and touch/key paths have been exercised with simulated inputs. Physical-radio compatibility still needs bench testing.
 
 Trying it on your radio? Tell Squadding Quads the radio model, EdgeTX version, whether you used touch or buttons, and which card you drew. A photo helps us fix any text that gets cut off.

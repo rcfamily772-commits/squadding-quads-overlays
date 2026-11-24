@@ -100,5 +100,55 @@ const decks = [
       "The other hand",
       "Choose your strongest freestyle line. Fly its mirror twice with the same timing."
     ]
+  ],
+  [
+    [
+      "Just Fly",
+      "Come on, please fly. Pretty please?"
+    ],
+    [
+      "Just Fly",
+      "Squadding Quads will beat you... in the pack tally if you don't fly!"
+    ],
+    [
+      "Just Fly",
+      "Does the day end with a Y? Then fly!"
+    ],
+    [
+      "Just Fly",
+      "Your batteries didn't charge themselves for a day on the sofa."
+    ],
+    [
+      "Just Fly",
+      "Less scrolling, more rolling."
+    ],
+    [
+      "Just Fly",
+      "The Angry Karen can wait. If it's safe to fly, get a pack in!"
+    ],
+    [
+      "Just Fly",
+      "BoyWonder has probably flown three packs already. Just saying."
+    ],
+    [
+      "Just Fly",
+      "Your drone is not a particularly expensive paperweight."
+    ],
+    [
+      "Just Fly",
+      "No tricks. No pressure. Just you and the sticks."
+    ],
+    [
+      "Just Fly",
+      "One... More... Pack...!"
+    ],
+    [
+      "Just Fly",
+      "We don't fly spreadsheets. Get those props turning!"
+    ],
+    [
+      "Just Fly",
+      "The only challenge today is to enjoy yourself. Go fly when it's safe."
+    ]
   ]
 ];
