@@ -4,6 +4,8 @@
 
 **[Download The Pack Lottery v1.2 (ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/pack-lottery/SQ_Pack_Lottery_v1.2.zip)**
 
+[Official v1.2 website](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/v1.2/)
+
 [Original v1.0 ZIP](SQ_Pack_Lottery_v1.zip) · [Previous v1.1 ZIP](SQ_Pack_Lottery_v1.1.zip)
 
 ## Inside the deck
