@@ -39,6 +39,7 @@ return function(_, source, width, height, tile, emit, ticks, assets)
     elseif f and f & env.XXLSIZE ~= 0 then size=44 end
     return math.ceil(#s*size*.55),size
   end
+  local albumFiles={}
   if assets then
     env.getRtcTime=function() return assets(nil,'clock') end
     env.dir=function(path)
@@ -57,13 +58,14 @@ return function(_, source, width, height, tile, emit, ticks, assets)
     end
     env.io={}
     function env.io.open(path,mode)
-      if path~='/WIDGETS/SQWall/last.txt' then return end
-      local body=assets(nil,'state')
-      if mode=='w' or (mode=='r' and body) then return {mode=mode,body=mode=='w' and '' or body} end
+      local album=path=='/WIDGETS/SQLotto/album-a.txt' or path=='/WIDGETS/SQLotto/album-b.txt'
+      if not album and path~='/WIDGETS/SQWall/last.txt' then return end
+      local body=album and albumFiles[path] or (not album and assets(nil,'state'))
+      if mode=='w' or (mode=='r' and body) then return {mode=mode,body=mode=='w' and '' or body,path=path,album=album} end
     end
     function env.io.read(f,n) return string.sub(f.body,1,n) end
     function env.io.write(f,s) f.body=string.sub(f.body..s,1,300) end
-    function env.io.close(f) if f.mode=='w' then assets(nil,'save',f.body) end end
+    function env.io.close(f) if f.mode=='w' then if f.album then albumFiles[f.path]=f.body else assets(nil,'save',f.body) end end end
   end
   local chunk=assert(load(source,'@main.lua','t',env))
   local api=chunk()

@@ -1,5 +1,9 @@
 # SQ Wallpaper Shuffle
 
+## v1.2 Gallery Black Label (Lua-only upgrade)
+
+[Download upgrade ZIP](SQWall-v1.2-Upgrade.zip) · [v1.2 page](https://rcfamily772-commits.github.io/squadding-quads-overlays/wallpaper-shuffle/v1.2/). Requires the complete [v1.1 artwork kit](https://github.com/rcfamily772-commits/squadding-quads-overlays/releases/download/SQwall/SQWall-v1.1.zip). Install only WIDGETS/SQWall/main.lua; retain art, wallpaper files, splash and last.txt. Full-screen Prev, Lucky, Next, Clean; use Enter or touch to exit clean preview. Optional Motion and SFX; startup intro retained. Physical radio validation pending.
+
 ## Latest: v1.1
 
 [Download v1.1 (38.9 MB ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/releases/download/SQwall/SQWall-v1.1.zip) · [Version 1.1 website](https://rcfamily772-commits.github.io/squadding-quads-overlays/wallpaper-shuffle/v1.1/) · [GitHub release](https://github.com/rcfamily772-commits/squadding-quads-overlays/releases/tag/SQwall) · [Release notes and installation](v1.1/RELEASE-NOTES.md) · [Radio sizes](v1.1/radio-sizes.txt)

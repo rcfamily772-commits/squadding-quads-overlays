@@ -1,5 +1,11 @@
 # Squadding Quads · The Pack Lottery
 
+## Radio v1.8 — Black Label
+
+[Download EdgeTX v1.8](SQ_Pack_Lottery_v1.8.zip) · [Radio release page](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/v1.8/). Browser stays on v1.7. Stats opens Passport, Vault and Achievements (Next cycles pages). Optional Motion, SFX and Haptic settings; sound and haptic off by default. Progress begins on radio with v1.8 and is separate from the browser. Two validated local files album-a.txt / album-b.txt in WIDGETS/SQLotto retain best rarity and counts; back up both to transfer. No model/flight-control access. Physical radio validation pending.
+
+## Browser v1.7 and previous radio versions
+
 **What are you flying this pack?** Draw a freestyle challenge on your EdgeTX radio before take-off. After landing, log the win, give it another go or deal yourself a fresh card.
 
 **[Download The Pack Lottery v1.7 (ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/pack-lottery/SQ_Pack_Lottery_v1.7.zip)**
