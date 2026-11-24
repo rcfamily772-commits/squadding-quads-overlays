@@ -1,0 +1,50 @@
+EdgeTX target list: https://github.com/EdgeTX/edgetx-sdcard/blob/master/sdcard.json
+
+Fatfish F16    c480x272
+Flysky EL18    c320x480
+Flysky NB4+    c320x480
+Flysky NV14    c320x480
+Flysky PA01    c320x240
+Flysky PL18    c480x320
+Flysky PL18EV    c480x320
+Flysky PL18U    c480x320
+Flysky ST16    c480x320
+FrSky Horus X10    c480x272
+FrSky Horus X10 Express    c480x272
+FrSky Horus X12s    c480x272
+FrSky QX7 Access    bw128x64
+FrSky X9D Plus 2019    bw212x64
+FrSky X9E    bw212x64
+HelloRadioSky V12    c320x240
+HelloRadioSky V14    bw128x64
+HelloRadioSky V14LCD    bw128x64
+HelloRadioSky V15    c480x272
+HelloRadioSky V16    c480x272
+iFlight Commando 8    bw128x64
+iFlight Commando 14    c480x272
+Jumper Bumblebee    bw128x64
+Jumper T12 MAX    bw128x64
+Jumper T14    bw128x64
+Jumper T15    c480x320
+Jumper T15 H7    c480x320
+Jumper T15 Pro    c480x320
+Jumper T16    c480x272
+Jumper T18    c480x272
+Jumper T18 H7    c480x272
+Jumper T20    bw128x64
+Jumper T20 V2    bw128x64
+Jumper T22    c480x320
+Jumper T-Pro S    bw128x64
+Jumper T-Pro V2    bw128x64
+RadioMaster Boxer    bw128x64
+RadioMaster GX10    c320x240
+RadioMaster GX12    bw128x64
+RadioMaster GX15    c480x320
+RadioMaster MT12    bw128x64
+RadioMaster Pocket    bw128x64
+RadioMaster TX12MK2    bw128x64
+RadioMaster TX15    c480x320
+RadioMaster TX16S / TX16S Mark II    c480x272
+RadioMaster TX16S MK3    c800x480
+RadioMaster Zorro    bw128x64
+Senduwing H17    c480x272
