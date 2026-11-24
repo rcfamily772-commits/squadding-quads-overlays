@@ -1,8 +1,14 @@
 # SQ Wallpaper Shuffle
 
+## Latest: v1.1
+
+[Download v1.1 (38.9 MB ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/releases/download/SQwall/SQWall-v1.1.zip) · [Version 1.1 website](https://rcfamily772-commits.github.io/squadding-quads-overlays/wallpaper-shuffle/v1.1/) · [GitHub release](https://github.com/rcfamily772-commits/squadding-quads-overlays/releases/tag/SQwall) · [Release notes and installation](v1.1/RELEASE-NOTES.md) · [Radio sizes](v1.1/radio-sizes.txt)
+
+The expanded pack includes 32 gallery images, 48 radio model listings, five colour artwork sizes, two monochrome artwork sizes and a custom splash screen. Monochrome artwork does not run the colour widget. The original v1.0 documentation follows.
+
 Give a colour-screen EdgeTX home page its own rotating collection of FPV artwork. When the widget first loads after power-up, it picks a wallpaper. Open it full screen and tap **I'm Feeling Lucky**, or press **Enter**, for another. With two or more readable PNGs, the next pick differs from the current one.
 
-[Download the SD-card kit](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/wallpaper-shuffle/SQ_Wallpaper_Shuffle_v1.zip) · [Launch page](https://rcfamily772-commits.github.io/squadding-quads-overlays/wallpaper-shuffle/) · [Try the actual Lua widget in the browser](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/test-bench/?wallpaper)
+[Download the original v1.0 SD-card kit](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/wallpaper-shuffle/SQ_Wallpaper_Shuffle_v1.zip) · [Launch page](https://rcfamily772-commits.github.io/squadding-quads-overlays/wallpaper-shuffle/) · [Try the actual Lua widget in the browser](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/test-bench/?wallpaper)
 
 ## Install
 
