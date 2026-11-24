@@ -1,5 +1,5 @@
--- Squadding Quads | The Pack Lottery | preview 1.1
-local levels = {"Beginner", "Intermediate", "Advanced", "OnlyDrones"}
+-- Squadding Quads | The Pack Lottery | preview 1.2
+local levels = {"Beginner", "Intermediate", "Advanced", "OnlyDrones", "Bench Pilot"}
 local decks = {
   {
     {"Figure of eight", "Circle two markers in an eight. Cross the middle at the same height on both passes."},
@@ -42,6 +42,20 @@ local decks = {
     {"Just Fly", "One... More... Pack...!"},
     {"Just Fly", "We don't fly spreadsheets. Get those props turning!"},
     {"Just Fly", "The only challenge today is to enjoy yourself. Go fly when it's safe."}
+  },
+  {
+    {"Touch Grass & Fly", "Betaflight ain't gonna fly for you. Unplug it and touch grass!"},
+    {"Touch Grass & Fly", "I know the bench in the shed is warm, but you're a pilot. Fly the bloody drone!"},
+    {"Touch Grass & Fly", "You've tuned it more times than you've flown it. Get outside!"},
+    {"Touch Grass & Fly", "Breaking news: grass exists outside your shed."},
+    {"Touch Grass & Fly", "Your soldering iron has more hours on it than your goggles."},
+    {"Touch Grass & Fly", "Another PID tune? Mate, the problem might be holding the controller."},
+    {"Touch Grass & Fly", "Your quad has the latest firmware. Your flying skills are still on factory settings."},
+    {"Touch Grass & Fly", "Blackbox analysis requires you to actually fly the drone first."},
+    {"Touch Grass & Fly", "That USB cable isn't a flight accessory. Unplug it!"},
+    {"Touch Grass & Fly", "The Angry Karen has reported you missing. Apparently you're still in the shed."},
+    {"Touch Grass & Fly", "You've built a flying machine, not a bloody museum exhibit."},
+    {"Touch Grass & Fly", "Less bench testing. More field testing. We don't fly spreadsheets!"}
   }
 }
 
@@ -54,7 +68,7 @@ local active = {"Landed it", "Try again", "Redraw", "Level"}
 local floor = math.floor
 
 local function create(zone)
-  return {zone=zone, level=1, bags={{},{},{},{}}, last={}, focus=1,
+  return {zone=zone, level=1, bags={{},{},{},{},{}}, last={}, focus=1,
           landed=0, attempts=0, seed=0}
 end
 
@@ -139,8 +153,9 @@ local function refresh(w,event,touch)
   lcd.drawText(pad,35,label,SMLSIZE+amber)
   local title = card and card[1] or "The Pack Lottery"
   local titleFont = width >= 300 and MIDSIZE or 0
+  if lcd.sizeText(title,titleFont) > width-2*pad then titleFont = 0 end
   lcd.drawText(pad,57,title,titleFont+cream)
-  local body = card and card[2] or w.message or (w.level == 4 and "One challenge. No tricks required. Draw a message and just fly when it is safe." or "Choose your level, then draw a challenge for this pack.")
+  local body = card and card[2] or w.message or (w.level == 4 and "One challenge. No tricks required. Draw a message and just fly when it is safe." or w.level == 5 and "Finish your safety checks, leave the bench and fly when conditions are safe." or "Choose your level, then draw a challenge for this pack.")
   local bodyY = width >= 300 and 95 or 86
   lcd.drawTextLines(pad,bodyY,width-2*pad,by-bodyY-4,body,cream)
   for i,action in ipairs(actions) do

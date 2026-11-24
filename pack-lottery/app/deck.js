@@ -150,5 +150,55 @@ const decks = [
       "Just Fly",
       "The only challenge today is to enjoy yourself. Go fly when it's safe."
     ]
+  ],
+  [
+    [
+      "Touch Grass & Fly",
+      "Betaflight ain't gonna fly for you. Unplug it and touch grass!"
+    ],
+    [
+      "Touch Grass & Fly",
+      "I know the bench in the shed is warm, but you're a pilot. Fly the bloody drone!"
+    ],
+    [
+      "Touch Grass & Fly",
+      "You've tuned it more times than you've flown it. Get outside!"
+    ],
+    [
+      "Touch Grass & Fly",
+      "Breaking news: grass exists outside your shed."
+    ],
+    [
+      "Touch Grass & Fly",
+      "Your soldering iron has more hours on it than your goggles."
+    ],
+    [
+      "Touch Grass & Fly",
+      "Another PID tune? Mate, the problem might be holding the controller."
+    ],
+    [
+      "Touch Grass & Fly",
+      "Your quad has the latest firmware. Your flying skills are still on factory settings."
+    ],
+    [
+      "Touch Grass & Fly",
+      "Blackbox analysis requires you to actually fly the drone first."
+    ],
+    [
+      "Touch Grass & Fly",
+      "That USB cable isn't a flight accessory. Unplug it!"
+    ],
+    [
+      "Touch Grass & Fly",
+      "The Angry Karen has reported you missing. Apparently you're still in the shed."
+    ],
+    [
+      "Touch Grass & Fly",
+      "You've built a flying machine, not a bloody museum exhibit."
+    ],
+    [
+      "Touch Grass & Fly",
+      "Less bench testing. More field testing. We don't fly spreadsheets!"
+    ]
   ]
 ];

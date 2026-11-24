@@ -16,16 +16,16 @@ function valid(s) {
 let state = fresh();
 try {
   const stored = JSON.parse(localStorage.getItem(key));
-  if (stored && Array.isArray(stored.bags) && stored.bags.length===3 && Array.isArray(stored.last) && stored.last.length===3) { stored.bags.push([]); stored.last.push(null); }
+  if (stored && Array.isArray(stored.bags) && Array.isArray(stored.last) && stored.bags.length===stored.last.length && stored.bags.length>=3 && stored.bags.length<decks.length) { while(stored.bags.length<decks.length) { stored.bags.push([]); stored.last.push(null); } }
   if (valid(stored)) state = stored;
 } catch {}
 function render() {
   const {level,card,tries,total,complete} = state;
   const active = card !== null;
   el('level').textContent = levels[level].textContent+' deck';
-  el('attempt').textContent = active ? 'Attempt '+tries : level===3 ? '1 challenge · 12 messages' : decks[level].length+' challenges';
+  el('attempt').textContent = active ? 'Attempt '+tries : level>=3 ? '1 challenge · '+decks[level].length+' messages' : decks[level].length+' challenges';
   el('title').textContent = active ? decks[level][card][0] : complete ? 'Landed it.' : 'Your next pack';
-  el('brief').textContent = active ? decks[level][card][1] : complete ? complete+' complete. Ready for another draw?' : level===3 ? 'No tricks. No pressure. Just fly when it is safe.' : 'Draw a card before take-off to see your challenge.';
+  el('brief').textContent = active ? decks[level][card][1] : complete ? complete+' complete. Ready for another draw?' : level===3 ? 'No tricks. No pressure. Just fly when it is safe.' : level===4 ? 'Finish your safety checks, leave the bench and fly when conditions are safe.' : 'Draw a card before take-off to see your challenge.';
   el('total').textContent = total+' landed this session';
   levels.forEach((b,i) => b.setAttribute('aria-pressed',i===level));
   el('draw').hidden = active;
