@@ -1,0 +1,22 @@
+# SQ Wallpaper Shuffle
+
+Give a colour-screen EdgeTX home page its own rotating collection of FPV artwork. When the widget first loads after power-up, it picks a wallpaper. Open it full screen and tap **I'm Feeling Lucky**, or press **Enter**, for another. With two or more readable PNGs, the next pick differs from the current one.
+
+[Download the SD-card kit](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/wallpaper-shuffle/SQ_Wallpaper_Shuffle_v1.zip) · [Launch page](https://rcfamily772-commits.github.io/squadding-quads-overlays/wallpaper-shuffle/) · [Try the actual Lua widget in the browser](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/test-bench/?wallpaper)
+
+## Install
+
+1. Unzip the kit. Copy **SQWall** into the existing **WIDGETS** folder on your SD card, and **SQWALL** into the existing **IMAGES** folder. Keep your other folders and files.
+2. Check for `/WIDGETS/SQWall/main.lua` and `/IMAGES/SQWALL/workshop.png`. Restart the radio.
+3. In **Screen Settings**, give a main view a single large widget zone, select **Setup widgets**, then choose **SQWall**. Use this view as your home page to see the art when you switch on.
+4. Double-tap the artwork or select **Full screen** from the widget menu. Tap **I'm Feeling Lucky** or press **Enter**. Hold **Return** to go back to the clean artwork.
+
+## Your collection
+
+The four included PNGs are Midnight FPV Workshop, Manchester After Dark, Angry Karen and Drone Dealer. Add your own landscape PNGs directly to `/IMAGES/SQWALL/` and reload the widget or restart the radio to rescan. Use short, simple filenames and size images close to your display resolution to save radio memory. The starter images are 480 × 272. Art fills the widget area with a centred crop. Wallpapers appear inside the assigned widget page; menus and the radio's global theme retain their usual appearance.
+
+## Startup and testing
+
+The last choice is saved in `/WIDGETS/SQWall/last.txt`. Use a writable SD card and a correctly set radio clock. The widget estimates the power-on time from the real-time clock and radio uptime. On model reload it reuses the current session's selection. Changing the clock or an unusually rapid reboot can affect session detection. Two valid pictures are needed for a different pick.
+
+Field preview 1.0. Lua behaviour tested with simulated display, SD-card and clock inputs. Physical-radio compatibility and bitmap memory limits still need a bench check. For feedback, include the radio, EdgeTX version, PNG size and what happened.

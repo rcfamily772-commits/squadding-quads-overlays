@@ -2,6 +2,10 @@
 const byId = id => document.getElementById(id);
 const canvas = byId('lcd'), ctx = canvas.getContext('2d');
 let worker, deadline, timer, source, adapter, filename, generation=0, busy=false, pending=[];
+let images=new Map(), epoch=Math.floor(Date.now()/1000), last='';
+const wallpaperRoot='../../wallpaper-shuffle/';
+const stock=['workshop.png','manc.png','karen.png','dealer.png'];
+const wallMode=new URLSearchParams(location.search).has('wallpaper');
 const show = text => { byId('status').textContent=text; };
 function stop(){
   if(worker) worker.terminate();
@@ -20,6 +24,11 @@ function textStyle(flags){
   return size;
 }
 function paint([op,x,y,a,b,c,d]){
+  if(op==='drawBitmap'){
+    const im=images.get(String(a).split('/').pop());
+    if(im)ctx.drawImage(im,x,y,im.naturalWidth*b/100,im.naturalHeight*b/100);
+    return;
+  }
   if(op==='clear'){ctx.fillStyle=color(x,'#151a20');ctx.fillRect(0,0,canvas.width,canvas.height);return;}
   if(op==='drawText'){textStyle(b);ctx.fillText(String(a),x,y);return;}
   if(op==='drawTextLines'){
@@ -63,6 +72,7 @@ function run(){
   let first=true;
   worker.onerror=e=>fail(e.message||'Lua engine could not start.');
   worker.onmessage=({data})=>{
+    if(typeof data.saved==='string'){last=data.saved;return;}
     clearTimeout(deadline);busy=false;
     if(data.error){fail(data.error);return;}
     try{data.commands.forEach(paint);}catch(err){fail(String(err));return;}
@@ -70,7 +80,7 @@ function run(){
     if(pending.length)send(pending.shift());
     else timer=setTimeout(()=>send({event:0}),120);
   };
-  send({source,adapter,width,height,tile});
+  send({source,adapter,width,height,tile,epoch,last,images:[...images].map(([name,im])=>({name,width:im.naturalWidth,height:im.naturalHeight}))});
 }
 function input(event,x,y){
   if(!worker||byId('view').selectedIndex)return;
@@ -88,16 +98,43 @@ document.onkeydown=e=>{
   if(k){e.preventDefault();input(k);}
 };
 async function read(url){const r=await fetch(url);if(!r.ok)throw Error('Could not load '+url);return r.text();}
-async function load(file){
+async function load(file,wall=false){
   const ticket=++generation;stop();source=null;
   try{
     if(file && file.size>512*1024)throw Error('Choose a Lua file under 512 KB.');
-    const [code,shim]=await Promise.all([file?file.text():read('../main.lua'),adapter||read('runtime.lua')]);
+    const [code,shim]=await Promise.all([file?file.text():read(wall?wallpaperRoot+'WIDGETS/SQWall/main.lua':'../main.lua'),adapter||read('runtime.lua')]);
+    if(wall && !images.size){
+      const entries=await Promise.all(stock.map(async name=>[name,await decodeImage(wallpaperRoot+'IMAGES/SQWALL/'+name)]));
+      if(ticket!==generation)return;
+      images=new Map(entries);
+    }
     if(ticket!==generation)return;
-    source=code;adapter=shim;filename=file?file.name:'Pack Lottery';run();
+    source=code;adapter=shim;filename=file?file.name:(wall?'SQ Wallpaper Shuffle':'Pack Lottery');run();
   }catch(err){if(ticket===generation)fail(String(err));}
 }
 byId('file').onchange=e=>{if(e.target.files[0])load(e.target.files[0]);};
 byId('demo').onclick=()=>{byId('file').value='';load();};
 byId('restart').onclick=byId('size').onchange=byId('view').onchange=run;
-load();
+async function decodeImage(url){
+  const im=new Image();im.src=url;await im.decode();return im;
+}
+let imageImport=0;
+async function importImages(files){
+  const id=++imageImport;
+  const pngs=[...files].filter(f=>/\.png$/i.test(f.name));
+  if(!pngs.length){show('Choose one or more PNG wallpapers.');return;}
+  try{
+    const entries=[];
+    for(const f of pngs){
+      const url=URL.createObjectURL(f);
+      try{entries.push([f.name,await decodeImage(url)]);}finally{URL.revokeObjectURL(url);}
+    }
+    if(id!==imageImport)return;
+    images=new Map(entries);last='';run();
+  }catch{show('Could not open one of those PNGs.');}
+}
+byId('images').onchange=e=>importImages(e.target.files);
+byId('folder').onchange=e=>importImages(e.target.files);
+byId('wall').onclick=()=>{imageImport++;images=new Map();last='';load(null,true);};
+byId('power').onclick=()=>{epoch=Math.max(epoch+3,Math.floor(Date.now()/1000));run();};
+load(null,wallMode);

@@ -1,5 +1,5 @@
 -- Adapter for single-file colour widgets. Each start gets a new worker and Lua VM.
-return function(_, source, width, height, tile, emit, ticks)
+return function(_, source, width, height, tile, emit, ticks, assets)
   local env = {assert=assert,error=error,ipairs=ipairs,pairs=pairs,next=next,
     pcall=pcall,select=select,type=type,tonumber=tonumber,tostring=tostring,
     math=math,string=string,table=table,utf8=utf8,unpack=table.unpack,
@@ -38,6 +38,32 @@ return function(_, source, width, height, tile, emit, ticks)
     elseif f and f & env.DBLSIZE ~= 0 then size=32
     elseif f and f & env.XXLSIZE ~= 0 then size=44 end
     return math.ceil(#s*size*.55),size
+  end
+  if assets then
+    env.getRtcTime=function() return assets(nil,'clock') end
+    env.dir=function(path)
+      local i=0
+      return function() i=i+1; return assets(nil,'name',path,i) end
+    end
+    env.Bitmap={}
+    function env.Bitmap.open(path)
+      if assets(nil,'width',path) then return path end
+    end
+    function env.Bitmap.getSize(path)
+      return assets(nil,'width',path),assets(nil,'height',path)
+    end
+    function lcd.drawBitmap(path,x,y,scale)
+      send('drawBitmap',x,y,path,scale or 100)
+    end
+    env.io={}
+    function env.io.open(path,mode)
+      if path~='/WIDGETS/SQWall/last.txt' then return end
+      local body=assets(nil,'state')
+      if mode=='w' or (mode=='r' and body) then return {mode=mode,body=mode=='w' and '' or body} end
+    end
+    function env.io.read(f,n) return string.sub(f.body,1,n) end
+    function env.io.write(f,s) f.body=string.sub(f.body..s,1,300) end
+    function env.io.close(f) if f.mode=='w' then assets(nil,'save',f.body) end end
   end
   local chunk=assert(load(source,'@main.lua','t',env))
   local api=chunk()

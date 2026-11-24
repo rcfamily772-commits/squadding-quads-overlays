@@ -12,7 +12,17 @@ self.onmessage = ({data}) => {
     commands=[];
     if (data.source !== undefined) {
       const init = fengari.load(data.adapter,'@adapter.lua')();
-      step = init(data.source,data.width,data.height,data.tile,emit,()=>Math.floor((performance.now()-start)/10));
+      const images=data.images || [];
+      let state=data.last;
+      function assets(op,path,index) {
+        if(op==='clock')return data.epoch+Math.floor((performance.now()-start)/1000);
+        if(op==='state')return state || undefined;
+        if(op==='save'){state=String(path).slice(0,300);self.postMessage({saved:state});return;}
+        if(op==='name')return path==='/IMAGES/SQWALL'?images[index-1]?.name:undefined;
+        const item=images.find(i=>'/IMAGES/SQWALL/'+i.name===path);
+        return item?.[op];
+      }
+      step = init(data.source,data.width,data.height,data.tile,emit,()=>Math.floor((performance.now()-start)/10),assets);
     }
     step(data.event || 0,data.x || 0,data.y || 0);
     self.postMessage({commands});
