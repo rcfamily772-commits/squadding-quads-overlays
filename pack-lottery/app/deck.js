@@ -200,5 +200,55 @@ const decks = [
       "Touch Grass & Fly",
       "Less bench testing. More field testing. We don't fly spreadsheets!"
     ]
+  ],
+  [
+    [
+      "Fucking Fly It",
+      "You paid for it. Fucking fly it!"
+    ],
+    [
+      "Fucking Fly It",
+      "Stop pissing about and get the bastard airborne."
+    ],
+    [
+      "Fucking Fly It",
+      "All the gear and fuck all flight time. Sort it out!"
+    ],
+    [
+      "Fucking Fly It",
+      "Your thumbs aren't ornamental, you absolute weapon."
+    ],
+    [
+      "Fucking Fly It",
+      "That drone cost £400. It's doing a magnificent impression of a fucking paperweight."
+    ],
+    [
+      "Fucking Fly It",
+      "Nobody gives a shit about your PID tune if you never fly."
+    ],
+    [
+      "Fucking Fly It",
+      "Another fucking firmware update? Have you considered flying?"
+    ],
+    [
+      "Fucking Fly It",
+      "Get off your arse. Those batteries aren't going to discharge themselves."
+    ],
+    [
+      "Fucking Fly It",
+      "You call yourself a pilot? Prove it, you magnificent bastard."
+    ],
+    [
+      "Fucking Fly It",
+      "Stop watching Squadding Quads and go fly your own fucking drone!"
+    ],
+    [
+      "Fucking Fly It",
+      "You've spent more time arguing about radios than using the bloody things."
+    ],
+    [
+      "Fucking Fly It",
+      "Fuck perfection. Fuck the excuses. Enjoy yourself and fly the bastard!"
+    ]
   ]
 ];

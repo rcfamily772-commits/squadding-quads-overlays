@@ -1,5 +1,5 @@
--- Squadding Quads | The Pack Lottery | preview 1.2
-local levels = {"Beginner", "Intermediate", "Advanced", "OnlyDrones", "Bench Pilot"}
+-- Squadding Quads | The Pack Lottery | preview 1.3
+local levels = {"Beginner", "Intermediate", "Advanced", "OnlyDrones", "Bench Pilot", "Adults Only"}
 local decks = {
   {
     {"Figure of eight", "Circle two markers in an eight. Cross the middle at the same height on both passes."},
@@ -56,6 +56,20 @@ local decks = {
     {"Touch Grass & Fly", "The Angry Karen has reported you missing. Apparently you're still in the shed."},
     {"Touch Grass & Fly", "You've built a flying machine, not a bloody museum exhibit."},
     {"Touch Grass & Fly", "Less bench testing. More field testing. We don't fly spreadsheets!"}
+  },
+  {
+    {"Fucking Fly It", "You paid for it. Fucking fly it!"},
+    {"Fucking Fly It", "Stop pissing about and get the bastard airborne."},
+    {"Fucking Fly It", "All the gear and fuck all flight time. Sort it out!"},
+    {"Fucking Fly It", "Your thumbs aren't ornamental, you absolute weapon."},
+    {"Fucking Fly It", "That drone cost £400. It's doing a magnificent impression of a fucking paperweight."},
+    {"Fucking Fly It", "Nobody gives a shit about your PID tune if you never fly."},
+    {"Fucking Fly It", "Another fucking firmware update? Have you considered flying?"},
+    {"Fucking Fly It", "Get off your arse. Those batteries aren't going to discharge themselves."},
+    {"Fucking Fly It", "You call yourself a pilot? Prove it, you magnificent bastard."},
+    {"Fucking Fly It", "Stop watching Squadding Quads and go fly your own fucking drone!"},
+    {"Fucking Fly It", "You've spent more time arguing about radios than using the bloody things."},
+    {"Fucking Fly It", "Fuck perfection. Fuck the excuses. Enjoy yourself and fly the bastard!"}
   }
 }
 
@@ -68,7 +82,7 @@ local active = {"Landed it", "Try again", "Redraw", "Level"}
 local floor = math.floor
 
 local function create(zone)
-  return {zone=zone, level=1, bags={{},{},{},{},{}}, last={}, focus=1,
+  return {zone=zone, level=1, bags={{},{},{},{},{},{}}, last={}, focus=1,
           landed=0, attempts=0, seed=0}
 end
 
@@ -114,7 +128,7 @@ local function tile(w)
   lcd.drawFilledRectangle(0,0,z.w,z.h,ink)
   if z.w < 36 or z.h < 16 then return end
   lcd.drawText(4,0,z.w >= 125 and "SQ / PACK LOTTERY" or "SQ",SMLSIZE+amber)
-  local title = w.card and decks[w.level][w.card][1] or "Open full screen"
+  local title = w.card and (w.level == 6 and "Adults Only" or decks[w.level][w.card][1]) or "Open full screen"
   if z.h >= 42 and lcd.sizeText(title,SMLSIZE) <= z.w-8 then
     lcd.drawText(4,21,title,SMLSIZE+cream)
   end
@@ -155,7 +169,7 @@ local function refresh(w,event,touch)
   local titleFont = width >= 300 and MIDSIZE or 0
   if lcd.sizeText(title,titleFont) > width-2*pad then titleFont = 0 end
   lcd.drawText(pad,57,title,titleFont+cream)
-  local body = card and card[2] or w.message or (w.level == 4 and "One challenge. No tricks required. Draw a message and just fly when it is safe." or w.level == 5 and "Finish your safety checks, leave the bench and fly when conditions are safe." or "Choose your level, then draw a challenge for this pack.")
+  local body = card and card[2] or w.message or (w.level == 4 and "One challenge. No tricks required. Draw a message and just fly when it is safe." or w.level == 5 and "Finish your safety checks, leave the bench and fly when conditions are safe." or w.level == 6 and "ADULTS ONLY: strong language. Draw to reveal. Fly only when safe." or "Choose your level, then draw a challenge for this pack.")
   local bodyY = width >= 300 and 95 or 86
   lcd.drawTextLines(pad,bodyY,width-2*pad,by-bodyY-4,body,cream)
   for i,action in ipairs(actions) do

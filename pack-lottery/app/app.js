@@ -17,7 +17,7 @@ let state = fresh();
 try {
   const stored = JSON.parse(localStorage.getItem(key));
   if (stored && Array.isArray(stored.bags) && Array.isArray(stored.last) && stored.bags.length===stored.last.length && stored.bags.length>=3 && stored.bags.length<decks.length) { while(stored.bags.length<decks.length) { stored.bags.push([]); stored.last.push(null); } }
-  if (valid(stored)) state = stored;
+  if (valid(stored)) { state = stored; if (state.level===5) { state.level=0; state.card=null; state.complete=''; } }
 } catch {}
 function render() {
   const {level,card,tries,total,complete} = state;
@@ -25,7 +25,7 @@ function render() {
   el('level').textContent = levels[level].textContent+' deck';
   el('attempt').textContent = active ? 'Attempt '+tries : level>=3 ? '1 challenge · '+decks[level].length+' messages' : decks[level].length+' challenges';
   el('title').textContent = active ? decks[level][card][0] : complete ? 'Landed it.' : 'Your next pack';
-  el('brief').textContent = active ? decks[level][card][1] : complete ? complete+' complete. Ready for another draw?' : level===3 ? 'No tricks. No pressure. Just fly when it is safe.' : level===4 ? 'Finish your safety checks, leave the bench and fly when conditions are safe.' : 'Draw a card before take-off to see your challenge.';
+  el('brief').textContent = active ? decks[level][card][1] : complete ? complete+' complete. Ready for another draw?' : level===3 ? 'No tricks. No pressure. Just fly when it is safe.' : level===4 ? 'Finish your safety checks, leave the bench and fly when conditions are safe.' : level===5 ? 'Adults only: strong language. Draw to reveal. Fly only when safe.' : 'Draw a card before take-off to see your challenge.';
   el('total').textContent = total+' landed this session';
   levels.forEach((b,i) => b.setAttribute('aria-pressed',i===level));
   el('draw').hidden = active;
@@ -66,6 +66,7 @@ el('landed').onclick = () => {
 };
 levels.forEach((button,i) => button.onclick = () => {
   if (i === state.level) return;
+  if (i === 5 && !confirm('Adults Only contains strong language. Continue?')) return;
   state.level = i;
   state.card = null;
   state.complete = '';

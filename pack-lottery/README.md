@@ -2,11 +2,11 @@
 
 **What are you flying this pack?** Draw a freestyle challenge on your EdgeTX radio before take-off. After landing, log the win, give it another go or deal yourself a fresh card.
 
-**[Download The Pack Lottery v1.2 (ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/pack-lottery/SQ_Pack_Lottery_v1.2.zip)**
+**[Download The Pack Lottery v1.3 (ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/pack-lottery/SQ_Pack_Lottery_v1.3.zip)**
 
-[Official v1.2 website](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/v1.2/)
+[Official v1.3 website](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/v1.3/)
 
-[Original v1.0 ZIP](SQ_Pack_Lottery_v1.zip) · [Previous v1.1 ZIP](SQ_Pack_Lottery_v1.1.zip)
+[Original v1.0 ZIP](SQ_Pack_Lottery_v1.zip) · [Previous v1.1 ZIP](SQ_Pack_Lottery_v1.1.zip) · [Previous v1.2 ZIP](SQ_Pack_Lottery_v1.2.zip) · [v1.2 page](v1.2/)
 
 ## Inside the deck
 
@@ -17,8 +17,9 @@
 | Advanced | 8 | **BoyWonder mirror** · Build a three-trick line and reverse every roll direction on the second run. |
 | OnlyDrones | 1 challenge / 12 messages | **Just Fly** · No tricks, no pressure. Go fly when conditions are safe. |
 | Bench Pilot | 1 challenge / 12 messages | **Touch Grass & Fly** · Finish your checks, unplug the USB cable and leave the shed. |
+| Adults Only (18+) | 1 challenge / 12 messages | **After Dark** · Explicit language, opt-in comedy deck. |
 
-Each skill deck deals all eight cards before it shuffles again. OnlyDrones cycles through twelve humorous messages without repeats within a shuffle; every message is the same Just Fly challenge. Bench Pilot independently shuffles twelve sarcastic reminders around the single Touch Grass & Fly challenge. Never skip required safety checks or fly in unsafe conditions. Switching levels remembers which cards you’ve drawn in each deck for the current session.
+Each skill deck deals all eight cards before it shuffles again. OnlyDrones cycles through twelve humorous messages without repeats within a shuffle; every message is the same Just Fly challenge. Bench Pilot independently shuffles twelve sarcastic reminders around the single Touch Grass & Fly challenge. Adults Only independently shuffles twelve uncensored messages, all for one flying challenge. On the radio, selecting this level shows a warning; Draw reveals the message. The browser asks for confirmation before entry. Never skip required safety checks or fly in unsafe conditions. Switching levels remembers which cards you’ve drawn in each deck for the current session.
 
 ## Get it on your radio
 
@@ -38,6 +39,6 @@ Hold **Return** to leave full screen. The home-screen tile shows your current ca
 
 ## Compatibility and feedback
 
-**Field preview 1.2** targets colour-screen EdgeTX radios with a display of 320 × 240 or larger. The original shuffle, scoring, retries and touch/key paths have been exercised with simulated inputs. The fifth deck still needs physical-radio testing.
+**Field preview 1.3** targets colour-screen EdgeTX radios with a display of 320 × 240 or larger. The original shuffle, scoring, retries and touch/key paths have been exercised with simulated inputs. The sixth deck still needs physical-radio testing.
 
 Trying it on your radio? Tell Squadding Quads the radio model, EdgeTX version, whether you used touch or buttons, and which card you drew. A photo helps us fix any text that gets cut off.
