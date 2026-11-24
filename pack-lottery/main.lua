@@ -1,4 +1,4 @@
--- Squadding Quads | The Pack Lottery | preview 1.6
+-- Squadding Quads | The Pack Lottery | preview 1.7
 local levels = {"Beginner", "Intermediate", "Advanced", "OnlyDrones", "Bench Pilot", "Adults Only"}
 local decks = {
   {
@@ -73,10 +73,10 @@ local decks = {
   }
 }
 
-local ink = lcd.RGB(18,23,31)
-local panel = lcd.RGB(39,49,63)
+local ink = lcd.RGB(15,16,17)
+local panel = lcd.RGB(43,40,34)
 local cream = lcd.RGB(245,244,232)
-local amber = lcd.RGB(255,193,72)
+local amber = lcd.RGB(225,190,123)
 local ready = {"Draw", "Level"}
 local active = {"Landed it", "Try again", "Redraw", "Level"}
 local floor = math.floor
@@ -192,7 +192,7 @@ local function refresh(w,event,touch)
   actions = w.card and active or ready
   slot = floor((width-2*pad)/#actions)
   lcd.drawFilledRectangle(0,0,width,height,ink)
-  lcd.drawText(pad,3,"SQ / PACK LOTTERY",SMLSIZE+amber)
+  lcd.drawText(pad,3,"SQ / BLACK LABEL",SMLSIZE+amber)
   lcd.drawText(width-pad,3,"LANDED "..w.landed,RIGHT+SMLSIZE+cream)
   local x,y,cw,ch = 14,28,width-32,by-38
   local accent = accents[w.level]
@@ -213,7 +213,7 @@ local function refresh(w,event,touch)
   else
     local tier = w.card and w.rarity or 1
     lcd.drawFilledRectangle(x,y,cw,ch,foil[tier])
-    lcd.drawRectangle(x,y,cw,ch,accent)
+    lcd.drawRectangle(x,y,cw,ch,amber)
     lcd.drawRectangle(x+3,y+3,cw-6,ch-6,tier > 1 and foilEdge[tier] or accent)
     local card = w.card and decks[w.level][w.card]
     local label = levels[w.level]

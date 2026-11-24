@@ -2,13 +2,23 @@
 
 **What are you flying this pack?** Draw a freestyle challenge on your EdgeTX radio before take-off. After landing, log the win, give it another go or deal yourself a fresh card.
 
-**[Download The Pack Lottery v1.6 (ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/pack-lottery/SQ_Pack_Lottery_v1.6.zip)**
+**[Download The Pack Lottery v1.7 (ZIP)](https://github.com/rcfamily772-commits/squadding-quads-overlays/raw/refs/heads/main/pack-lottery/SQ_Pack_Lottery_v1.7.zip)**
 
-[Official v1.6 website](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/v1.6/)
+[Official v1.7 website](https://rcfamily772-commits.github.io/squadding-quads-overlays/pack-lottery/v1.7/)
 
 [Original v1.0 ZIP](SQ_Pack_Lottery_v1.zip) · [Previous v1.1 ZIP](SQ_Pack_Lottery_v1.1.zip) · [Previous v1.2 ZIP](SQ_Pack_Lottery_v1.2.zip) · [v1.2 page](v1.2/)
 
-## New in v1.6 — Collector’s Edition
+## New in v1.7 — Black Label Edition
+
+- Black-and-gold card room, deck-box opening sequence, serial-numbered cards, reduced-motion support.
+- Nine achievements and personalised Pilot Passport based on the existing collection. Export cards or passport as PNG images.
+- Installable browser app with scoped service worker and offline app shell after the first successful online load. Use Install / offline or the browser menu; support varies by browser.
+- Export a local JSON collection backup and restore on another device. Restore replaces the current collection and call sign after confirmation; does not include session tally or sound settings. No cloud storage or account.
+- EdgeTX: black-and-gold palette, all 60 cards and existing lightweight rarity and sound functionality; browser-only passport, achievements, image export and album.
+
+[Previous v1.6 ZIP](SQ_Pack_Lottery_v1.6.zip) · [v1.6 website](v1.6/)
+
+## Retained from v1.6 — Collector’s Edition
 
 - Six bespoke SVG deck crests, distinct card backs and four cosmetic foil finishes: Standard 70%, Rare 20%, Legendary 9%, Mythical 1%. Random rarity is independent of the challenge; there are no paid draws.
 - Shimmer, sparks, subtle pointer tilt and deck recoil, with reduced-motion support; original rarity chimes and optional supported-device vibration.
@@ -66,6 +76,6 @@ Hold **Return** to leave full screen. The home-screen tile shows your current ca
 
 ## Compatibility and feedback
 
-**Field preview 1.6** targets colour-screen EdgeTX radios with a display of 320 × 240 or larger. The original shuffle, scoring, retries and touch/key paths have been exercised with simulated inputs. The redesigned radio interface, animation and optional sound still need physical-radio testing.
+**Field preview 1.7** targets colour-screen EdgeTX radios with a display of 320 × 240 or larger. The original shuffle, scoring, retries and touch/key paths have been exercised with simulated inputs. The redesigned radio interface, animation and optional sound still need physical-radio testing.
 
 Trying it on your radio? Tell Squadding Quads the radio model, EdgeTX version, whether you used touch or buttons, and which card you drew. A photo helps us fix any text that gets cut off.

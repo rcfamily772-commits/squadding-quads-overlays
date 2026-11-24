@@ -4,11 +4,12 @@ const el = id => document.getElementById(id);
 const levels = Array.from(document.querySelectorAll('nav button'));
 const ranks=['B','I','A','OD','BP','18+'], suits=['♣','♦','♠','♥','♣','♠'];
 let busy=false;
-const controls=()=>[...levels,...['draw','landed','retry','redraw','reset'].map(el)];
+const controls=()=>[...levels,...['draw','landed','retry','redraw','reset','share-card','passport-open','album-open'].map(el)];
 function setBusy(value){busy=value;controls().forEach(b=>b.disabled=value);}
 const face=()=>el('challenge-card');
+const black=SQBlack;
 const collector=SQCollector, rarityNames=['Standard','Rare','Legendary','Mythical'];
-let haptics=true,adultAlbum=false;
+let haptics=true,adultAlbum=false,needsUnbox=true,awardTimer;
 try{haptics=localStorage.getItem('sq.pack-lottery.haptics.v1')!=='off';}catch{}
 function buzz(pattern){if(haptics)try{navigator.vibrate?.(pattern);}catch{}}
 function syncHaptics(){const b=el('haptics');const available=typeof navigator!=='undefined'&&typeof navigator.vibrate==='function';b.disabled=!available;b.textContent=!available?'Haptics: unavailable':haptics?'Haptics: on':'Haptics: off';b.setAttribute('aria-pressed',String(available&&haptics));}
@@ -19,7 +20,7 @@ function updateAlbumCount(){el('album-open').textContent='Album '+collector.stat
 function make(tag,cls,content){const a=document.createElement(tag);if(cls)a.className=cls;if(content!==undefined)a.textContent=content;return a;}
 function renderAlbum(){const stats=collector.stats(),grid=el('album-grid');el('album-stats').textContent=stats.discovered+'/60 discovered · '+stats.draws+' draws · '+stats.completed+' completed'+(stats.stored?'':' · storage unavailable');el('album-rarities').textContent=stats.totals.map((v,i)=>rarityNames[i]+': '+v).join(' · ');grid.replaceChildren();const filter=el('album-filter').value, fav=el('album-favorites').checked;
 decks.forEach((deck,l)=>{if(filter!=='all'&&Number(filter)!==l)return;deck.forEach((entry,c)=>{const v=collector.get(l,c);if(fav&&!v?.favorite)return;const hiddenAdult=l===5&&!adultAlbum;const tile=make('article','album-tile '+(v?v.best:'unknown'));tile.dataset.deck=String(l);const emblem=make('img');emblem.src='art/deck-'+l+'.svg';emblem.alt='';tile.append(emblem,make('small','',levels[l].textContent+' · '+String(c+1).padStart(2,'0')),make('h3','',!v?'Undiscovered':hiddenAdult?'Adults Only card':entry[0]));
-if(v){tile.append(make('p','',hiddenAdult?'Strong language hidden.':entry[1]),make('small','',titleCase(v.best)+' · Drawn '+v.seen+' · Landed '+v.completed),make('small','',v.finishes.map((f,i)=>f?rarityNames[i]+' ×'+f:'').filter(Boolean).join(' · ')));const button=make('button','favorite',v.favorite?'★ Favourited':'☆ Favourite');button.type='button';button.setAttribute('aria-pressed',String(v.favorite));button.onclick=()=>{collector.favorite(l,c);button.textContent=collector.get(l,c).favorite?'★ Favourited':'☆ Favourite';button.setAttribute('aria-pressed',String(collector.get(l,c).favorite));if(el('album-favorites').checked&&!collector.get(l,c).favorite)tile.remove();};tile.append(button);}else tile.append(make('p','','Deal this card to unlock it.'));grid.append(tile);});});
+if(v){tile.append(make('p','',hiddenAdult?'Strong language hidden.':entry[1]),make('small','',titleCase(v.best)+' · Drawn '+v.seen+' · Landed '+v.completed),make('small','',v.finishes.map((f,i)=>f?rarityNames[i]+' ×'+f:'').filter(Boolean).join(' · ')));const button=make('button','favorite',v.favorite?'★ Favourited':'☆ Favourite');button.type='button';button.setAttribute('aria-pressed',String(v.favorite));button.onclick=()=>{collector.favorite(l,c);button.textContent=collector.get(l,c).favorite?'★ Favourited':'☆ Favourite';button.setAttribute('aria-pressed',String(collector.get(l,c).favorite));if(el('album-favorites').checked&&!collector.get(l,c).favorite)tile.remove();};tile.append(button);const exportButton=make('button','favorite','Export PNG');exportButton.type='button';exportButton.onclick=async()=>{try{await black.exportImage({type:'card',level:l,card:c,rarity:v.best,hideAdult:hiddenAdult});el('backup-status').textContent='Card image exported.';}catch(e){el('backup-status').textContent=e.message;}};tile.append(exportButton);}else tile.append(make('p','','Deal this card to unlock it.'));grid.append(tile);});});
 if(!grid.children.length)grid.append(make('p','','No matching cards yet.'));el('album-adult').hidden=adultAlbum;}
 el('album-open').onclick=()=>{if(busy)return;adultAlbum=false;renderAlbum();el('album').showModal();};
 el('album-close').onclick=()=>el('album').close();
@@ -29,6 +30,18 @@ el('album').addEventListener('close',()=>{adultAlbum=false;el('album-grid').repl
 const reduced=()=>window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 face().addEventListener('pointermove',e=>{if(busy||reduced()||e.pointerType==='touch')return;const r=face().getBoundingClientRect();face().style.setProperty('--rx',((.5-(e.clientY-r.top)/r.height)*9)+'deg');face().style.setProperty('--ry',(((e.clientX-r.left)/r.width-.5)*9)+'deg');});
 face().addEventListener('pointerleave',()=>{face().style.setProperty('--rx','0deg');face().style.setProperty('--ry','0deg');});
+function achievementIds(){return new Set(black.stats().awards.filter(a=>a.unlocked).map(a=>a.id));}
+function newAwards(before){const unlocked=black.stats().awards.filter(a=>a.unlocked&&!before.has(a.id));if(!unlocked.length)return;const t=el('award-toast');t.textContent='Achievement unlocked: '+unlocked.map(a=>a.name).join(' · ');t.hidden=false;clearTimeout(awardTimer);awardTimer=setTimeout(()=>{t.hidden=true;},4500);}
+async function unbox(){if(!needsUnbox)return;needsUnbox=false;const t=el('table');if(reduced())return;t.classList.add('unboxing');sfx('shuffle');try{await new Promise(r=>setTimeout(r,580));}finally{t.classList.remove('unboxing');}}
+function renderPassport(){const s=black.stats();el('passport-name-display').textContent=black.getName()||'FIELD PILOT';el('passport-rank').textContent=black.rank(s.completed);el('passport-landed').textContent=s.completed+' landed';el('passport-discovered').textContent=s.discovered+'/60 cards';el('passport-awards').textContent=s.awards.filter(a=>a.unlocked).length+'/'+s.awards.length+' awards';const g=el('achievement-grid');g.replaceChildren();for(const a of s.awards){const tile=make('div','achievement '+(a.unlocked?'unlocked':'locked'));tile.append(make('strong','',a.name),make('small','',a.desc),make('span','',a.unlocked?'UNLOCKED':'LOCKED'));g.append(tile);}}
+el('passport-open').onclick=()=>{if(busy)return;el('pilot-name').value=black.getName();renderPassport();el('passport').showModal();};
+el('passport-close').onclick=()=>el('passport').close();
+el('pilot-name').oninput=()=>{black.setName(el('pilot-name').value);renderPassport();};
+el('passport-export').onclick=async()=>{try{await black.exportImage({type:'passport'});}catch(e){alert(e.message);}};
+el('share-card').onclick=async()=>{if(busy||state.card===null)return;try{await black.exportImage({type:'card',level:state.level,card:state.card,rarity:state.rarity});el('share-status').textContent='PNG exported. Ready to share.';}catch(e){el('share-status').textContent=e.message;}};
+el('backup-export').onclick=()=>{try{black.exportBackup();el('backup-status').textContent='Collection backup exported.';}catch(e){el('backup-status').textContent=e.message;}};
+el('backup-import').onclick=()=>el('backup-file').click();
+el('backup-file').onchange=async()=>{const input=el('backup-file'),file=input.files?.[0];if(!file)return;try{if(file.size>512000)throw Error('Backup exceeds 512 KB.');const b=JSON.parse(await file.text());collector.validateBackup(b);if(!confirm('Replace your current collection and pilot call sign with this backup? Export the current collection first if you wish to keep it.'))return;black.restore(b);state.card=null;state.collected=false;state.complete='';save();renderAlbum();el('backup-status').textContent='Backup restored successfully.';}catch(e){el('backup-status').textContent='Restore failed: '+e.message;}finally{input.value='';}};
 async function reveal(r){const card=face();card.classList.remove('foil-reveal');void card.offsetWidth;card.classList.add('foil-reveal');if(r==='mythical'||r==='legendary'){sfx(r);buzz(r==='mythical'?[30,40,30,60]:[20,30,20]);}else if(r==='rare'){sfx('rare');buzz(25);}else buzz(15);if(!reduced()&&r!=='standard')await new Promise(resolve=>setTimeout(resolve,r==='mythical'?700:480));card.classList.remove('foil-reveal');}
 
 const sound=typeof SQSfx!=='undefined'?SQSfx:null;
@@ -59,7 +72,10 @@ function render() {
   const active = card !== null;
   face().dataset.rarity=active?state.rarity:'standard';
   el('card-art').src=el('back-art').src='art/deck-'+level+'.svg';
-  el('rarity').textContent=active?titleCase(state.rarity):'Collector’s edition';
+  el('rarity').textContent=active?titleCase(state.rarity):'Black Label';
+  el('card-serial').textContent=active?black.serial(level,card)+' / BLACK LABEL':'BLACK LABEL / FIELD EDITION';
+  el('share-card').hidden=!active;
+  el('share-status').textContent='';
   updateAlbumCount();
   el('table').dataset.level=String(level);
   el('rank').textContent=el('rank-bottom').textContent=ranks[level];
@@ -99,13 +115,13 @@ function drawCard() {
   state.complete = '';
   save();
 }
-async function deal(){if(busy)return;setBusy(true);try{if(sound)sound.unlock();sfx(state.bags[state.level].length?'tap':'shuffle');await motion('deal-out',180);drawCard();sfx('deal');await motion('deal-in',420);await reveal(state.rarity);}finally{setBusy(false);el('landed').focus();}}
+async function deal(){if(busy)return;setBusy(true);try{const before=achievementIds();if(sound)sound.unlock();await unbox();sfx(state.bags[state.level].length?'tap':'shuffle');await motion('deal-out',180);drawCard();sfx('deal');await motion('deal-in',420);await reveal(state.rarity);newAwards(before);}finally{setBusy(false);el('landed').focus();}}
 el('draw').onclick = el('redraw').onclick = deal;
 el('retry').onclick = async () => { if(busy)return;setBusy(true);try{sfx('retry');buzz([10,20,10]);state.tries++;save();await motion('retry',240);}finally{setBusy(false);} };
 el('landed').onclick = async () => {
   if (busy || state.card === null) return;
   setBusy(true);
-  try{sfx('win');buzz([20,40,20]);await motion('win-out',250);
+  try{const before=achievementIds();sfx('win');buzz([20,40,20]);await motion('win-out',250);
   if(state.collected)collector.complete(state.level,state.card);
   state.complete = decks[state.level][state.card][0];
   state.total++;
@@ -113,6 +129,7 @@ el('landed').onclick = async () => {
   state.collected=false;
   save();
   await motion('deal-in',420);
+  newAwards(before);
   }finally{setBusy(false);el('draw').focus();}
 };
 levels.forEach((button,i) => button.onclick = () => {
@@ -120,6 +137,7 @@ levels.forEach((button,i) => button.onclick = () => {
   if (i === 5 && !confirm('Adults Only contains strong language. Continue?')) return;
   sfx('level');
   state.level = i;
+  needsUnbox=true;
   state.card = null;
   state.collected=false;
   state.complete = '';
@@ -130,7 +148,15 @@ el('reset').onclick = () => {
   if (confirm('Start a new session and clear this tally and deck progress?')) {
     sfx('tap');
     state = fresh();
+    needsUnbox=true;
     save();
   }
 };
 render();
+
+// Installation is optional; offline indicator is set only after the app shell is cached.
+let installEvent=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;el('install').textContent='Install app';});
+window.addEventListener('appinstalled',()=>{installEvent=null;el('install').textContent='Installed';});
+el('install').onclick=async()=>{if(installEvent){const e=installEvent;installEvent=null;try{await e.prompt();await e.userChoice;}catch{}return;}alert('On Android or desktop, use your browser menu → Install app or Add to Home screen. On iPhone/iPad, open in Safari → Share → Add to Home Screen. Offline play is ready once the status says Offline ready.');};
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').then(()=>navigator.serviceWorker.ready).then(reg=>{const sw=reg.active;if(sw)sw.postMessage('CHECK_OFFLINE');}).catch(()=>{el('offline-status').textContent='Offline unavailable';});navigator.serviceWorker.addEventListener('message',e=>{if(e.data==='SQ_OFFLINE_READY')el('offline-status').textContent='Offline ready';});}else el('offline-status').textContent='Offline unavailable';
