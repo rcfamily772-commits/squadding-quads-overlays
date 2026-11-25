@@ -2,7 +2,7 @@
 
 ## Squadding Quads Tools
 
-[Open the complete Black Label software collection](https://rcfamily772-commits.github.io/squadding-quads-overlays/tools/): Pack Lottery, Wallpaper Shuffle, RF Doctor, LiPo Butler, OSD Studio, EdgeTX Test Bench and OBS Glass Overlays.
+[Open the complete Black Label software collection](https://rcfamily772-commits.github.io/squadding-quads-overlays/tools/): Pack Lottery, Wallpaper Shuffle, RF Doctor, LiPo Butler, OSD Studio, EdgeTX Test Bench OBS Glass Overlays and [SQ Radio Toolbox v1.0](https://rcfamily772-commits.github.io/squadding-quads-overlays/radio-toolbox/).
 
 
 Independent, Squadding Quads-owned copy of the V5 frosted-glass overlay prototype, reproduced with permission of the original author.
