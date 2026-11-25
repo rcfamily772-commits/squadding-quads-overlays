@@ -1,4 +1,4 @@
--- SQ Wallpaper Shuffle v1.5 | Complete Gallery
+-- SQ Wallpaper Shuffle v1.6 | Complete Gallery
 local folder,art,statePath="/IMAGES/SQWALL/","/WIDGETS/SQWall/art/","/WIDGETS/SQWall/last.txt"
 local floor,ceil,min,max=math.floor,math.ceil,math.min,math.max
 local current,boot,introShown
