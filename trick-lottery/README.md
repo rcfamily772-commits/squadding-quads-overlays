@@ -1,3 +1,35 @@
+# The Trick Lottery v2.5 — Fixed Wing Edition
+
+125 cards, seven decks, six flying modes. 25 new fixed-wing cards (20 field, five simulator-only). Original 100 IDs unchanged. Radio v2.5 migrates 60/100-card saves to 125-card SQ25 format. Back up all SQLotto TXT files; older versions cannot read new SQ25 saves. Browser storage keys unchanged. On-radio tests pending.
+
+## Fixed Wing deck
+1. **Deck of Wings** — Fly one smooth rectangular circuit at steady height and speed.
+2. **Mirror circuit** — Fly left- and right-hand circuits with ample clearance.
+3. **Horizon keeper** — Hold a straight level leg for ten seconds in clear air.
+4. **The big eight** — Fly a wide figure eight at a consistent crossing height.
+5. **Three gentle banks** — Link three broad alternating turns at comfortable airspeed.
+6. **Heading hold** — Maintain a steady heading for ten seconds in clear air.
+7. **Parallel lines** — Fly two parallel legs with a wide turn between them.
+8. **Smooth climb** — Climb gently, level out and hold heading with ample clearance.
+9. **Descent discipline** — Make a gentle descent and level out well above ground.
+10. **Speed step** — Change between two comfortable cruise speeds while holding height.
+11. **Windward circuit** — In suitable wind, fly a wide circuit and note ground-track changes.
+12. **Wind correction** — Hold a straight ground track in light crosswind at safe height.
+13. **The long glide** — At generous altitude, practise a short reduced-power glide at safe airspeed.
+14. **Smooth return** — Return from a normal circuit to a stable approach heading.
+15. **Go-around** — Practise an early go-around from a stable approach with safe clearance.
+16. **Landing zone** — Make a normal landing in a clear designated landing area.
+17. **Two tidy landings** — Complete two controlled landings, stopping for checks between flights.
+18. **Steady camera pass** — Fly a smooth filming pass in open air at safe height, away from people.
+19. **Symmetric arcs** — Fly two broad turns of similar size, left then right.
+20. **Energy review** — Review DVR or logs after a normal circuit for smooth speed changes.
+21. **Ground rush 50** — SIM ONLY: Fly a low-level pass above 50 km/h in a simulator.
+22. **Axial roll** — SIM ONLY: Complete an axial roll and return to level flight.
+23. **Big sky loop** — SIM ONLY: Fly one smooth loop and return to the entry heading.
+24. **Cuban practice** — SIM ONLY: Practise a half Cuban eight with virtual recovery height.
+25. **Slow flight lab** — SIM ONLY: Explore slow flight and recover before losing control.
+
+## Previous release notes
 # The Trick Lottery v2.4 — Black Label
 
 [Play / download / test](https://rcfamily772-commits.github.io/squadding-quads-overlays/trick-lottery/)
