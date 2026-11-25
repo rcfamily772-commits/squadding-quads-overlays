@@ -1,5 +1,5 @@
 'use strict';
-const CACHE='sq-pack-lottery-black-label-v1.7', SHELL=["./","./index.html","./?v=1.7","./style.css?v=1.7","./deck.js?v=1.7","./sfx.js?v=1.7","./collector.js?v=1.7","./black-label.js?v=1.7","./app.js?v=1.7","./manifest.webmanifest","./icons/icon-192.png","./icons/icon-512.png","./art/deck-0.svg","./art/deck-1.svg","./art/deck-2.svg","./art/deck-3.svg","./art/deck-4.svg","./art/deck-5.svg"];
+const CACHE='sq-pack-lottery-black-label-v2.0', SHELL=["./","./index.html","./?v=2.0","./style.css?v=2.0","./deck.js?v=2.0","./sfx.js?v=2.0","./collector.js?v=2.0","./black-label.js?v=2.0","./app.js?v=2.0","./v2.js?v=2.0","./manifest.webmanifest","./icons/icon-192.png","./icons/icon-512.png","./art/deck-0.svg","./art/deck-1.svg","./art/deck-2.svg","./art/deck-3.svg","./art/deck-4.svg","./art/deck-5.svg"];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('sq-pack-lottery-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('message',e=>{if(e.data==='CHECK_OFFLINE')e.waitUntil(caches.open(CACHE).then(async c=>{if((await Promise.all(SHELL.map(u=>c.match(u)))).every(Boolean))e.source?.postMessage('SQ_OFFLINE_READY');}));});

@@ -1,3 +1,7 @@
+# The Trick Lottery v2.0
+
+[Current release](../trick-lottery/) · [Radio v1.8 archive](v1.8/)
+
 # Squadding Quads · The Pack Lottery
 
 ## Radio v1.8 — Black Label

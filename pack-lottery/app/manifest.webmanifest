@@ -1,13 +1,13 @@
 {
   "id": "./",
-  "name": "Squadding Quads — Pack Lottery Black Label",
-  "short_name": "SQ Pack Lottery",
-  "start_url": "./?v=1.7",
+  "name": "Squadding Quads — Trick Lottery Black Label",
+  "short_name": "SQ Trick Lottery",
+  "start_url": "./?v=2.0",
   "scope": "./",
   "display": "standalone",
   "background_color": "#101111",
   "theme_color": "#101111",
-  "description": "60 real-world FPV challenge cards, collection and pilot passport.",
+  "description": "100 FPV FPV challenge cards, collection and pilot passport.",
   "icons": [
     {
       "src": "icons/icon-192.png",

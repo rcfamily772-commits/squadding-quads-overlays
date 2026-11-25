@@ -8,7 +8,7 @@ const controls=()=>[...levels,...['draw','landed','retry','redraw','reset','shar
 function setBusy(value){busy=value;controls().forEach(b=>b.disabled=value);}
 const face=()=>el('challenge-card');
 const black=SQBlack;
-const collector=SQCollector, rarityNames=['Standard','Rare','Legendary','Mythical'];
+const collector=SQCollector, rarityNames=['Standard','Rare','Legendary','Mythical','Golden Ticket'];
 let haptics=true,adultAlbum=false,needsUnbox=true,awardTimer;
 try{haptics=localStorage.getItem('sq.pack-lottery.haptics.v1')!=='off';}catch{}
 function buzz(pattern){if(haptics)try{navigator.vibrate?.(pattern);}catch{}}
@@ -16,9 +16,9 @@ function syncHaptics(){const b=el('haptics');const available=typeof navigator!==
 el('haptics').onclick=()=>{haptics=!haptics;try{localStorage.setItem('sq.pack-lottery.haptics.v1',haptics?'on':'off');}catch{}syncHaptics();if(haptics)buzz(15);else try{navigator.vibrate?.(0);}catch{}};
 syncHaptics();
 const titleCase=r=>rarityNames[collector.rarities.indexOf(r)]||'Standard';
-function updateAlbumCount(){el('album-open').textContent='Album '+collector.stats().discovered+'/60';}
+function updateAlbumCount(){el('album-open').textContent='Album '+collector.stats().discovered+'/100';}
 function make(tag,cls,content){const a=document.createElement(tag);if(cls)a.className=cls;if(content!==undefined)a.textContent=content;return a;}
-function renderAlbum(){const stats=collector.stats(),grid=el('album-grid');el('album-stats').textContent=stats.discovered+'/60 discovered · '+stats.draws+' draws · '+stats.completed+' completed'+(stats.stored?'':' · storage unavailable');el('album-rarities').textContent=stats.totals.map((v,i)=>rarityNames[i]+': '+v).join(' · ');grid.replaceChildren();const filter=el('album-filter').value, fav=el('album-favorites').checked;
+function renderAlbum(){const stats=collector.stats(),grid=el('album-grid');el('album-stats').textContent=stats.discovered+'/100 discovered · '+stats.draws+' draws · '+stats.completed+' completed'+(stats.stored?'':' · storage unavailable');el('album-rarities').textContent=stats.totals.map((v,i)=>rarityNames[i]+': '+v).join(' · ');grid.replaceChildren();const filter=el('album-filter').value, fav=el('album-favorites').checked;
 decks.forEach((deck,l)=>{if(filter!=='all'&&Number(filter)!==l)return;deck.forEach((entry,c)=>{const v=collector.get(l,c);if(fav&&!v?.favorite)return;const hiddenAdult=l===5&&!adultAlbum;const tile=make('article','album-tile '+(v?v.best:'unknown'));tile.dataset.deck=String(l);const emblem=make('img');emblem.src='art/deck-'+l+'.svg';emblem.alt='';tile.append(emblem,make('small','',levels[l].textContent+' · '+String(c+1).padStart(2,'0')),make('h3','',!v?'Undiscovered':hiddenAdult?'Adults Only card':entry[0]));
 if(v){tile.append(make('p','',hiddenAdult?'Strong language hidden.':entry[1]),make('small','',titleCase(v.best)+' · Drawn '+v.seen+' · Landed '+v.completed),make('small','',v.finishes.map((f,i)=>f?rarityNames[i]+' ×'+f:'').filter(Boolean).join(' · ')));const button=make('button','favorite',v.favorite?'★ Favourited':'☆ Favourite');button.type='button';button.setAttribute('aria-pressed',String(v.favorite));button.onclick=()=>{collector.favorite(l,c);button.textContent=collector.get(l,c).favorite?'★ Favourited':'☆ Favourite';button.setAttribute('aria-pressed',String(collector.get(l,c).favorite));if(el('album-favorites').checked&&!collector.get(l,c).favorite)tile.remove();};tile.append(button);const exportButton=make('button','favorite','Export PNG');exportButton.type='button';exportButton.onclick=async()=>{try{await black.exportImage({type:'card',level:l,card:c,rarity:v.best,hideAdult:hiddenAdult});el('backup-status').textContent='Card image exported.';}catch(e){el('backup-status').textContent=e.message;}};tile.append(exportButton);}else tile.append(make('p','','Deal this card to unlock it.'));grid.append(tile);});});
 if(!grid.children.length)grid.append(make('p','','No matching cards yet.'));el('album-adult').hidden=adultAlbum;}
@@ -33,7 +33,7 @@ face().addEventListener('pointerleave',()=>{face().style.setProperty('--rx','0de
 function achievementIds(){return new Set(black.stats().awards.filter(a=>a.unlocked).map(a=>a.id));}
 function newAwards(before){const unlocked=black.stats().awards.filter(a=>a.unlocked&&!before.has(a.id));if(!unlocked.length)return;const t=el('award-toast');t.textContent='Achievement unlocked: '+unlocked.map(a=>a.name).join(' · ');t.hidden=false;clearTimeout(awardTimer);awardTimer=setTimeout(()=>{t.hidden=true;},4500);}
 async function unbox(){if(!needsUnbox)return;needsUnbox=false;const t=el('table');if(reduced())return;t.classList.add('unboxing');sfx('shuffle');try{await new Promise(r=>setTimeout(r,580));}finally{t.classList.remove('unboxing');}}
-function renderPassport(){const s=black.stats();el('passport-name-display').textContent=black.getName()||'FIELD PILOT';el('passport-rank').textContent=black.rank(s.completed);el('passport-landed').textContent=s.completed+' landed';el('passport-discovered').textContent=s.discovered+'/60 cards';el('passport-awards').textContent=s.awards.filter(a=>a.unlocked).length+'/'+s.awards.length+' awards';const g=el('achievement-grid');g.replaceChildren();for(const a of s.awards){const tile=make('div','achievement '+(a.unlocked?'unlocked':'locked'));tile.append(make('strong','',a.name),make('small','',a.desc),make('span','',a.unlocked?'UNLOCKED':'LOCKED'));g.append(tile);}}
+function renderPassport(){const s=black.stats();el('passport-name-display').textContent=black.getName()||'FIELD PILOT';el('passport-rank').textContent=black.rank(s.completed);el('passport-landed').textContent=s.completed+' landed';el('passport-discovered').textContent=s.discovered+'/100 cards';el('passport-awards').textContent=s.awards.filter(a=>a.unlocked).length+'/'+s.awards.length+' awards';const g=el('achievement-grid');g.replaceChildren();for(const a of s.awards){const tile=make('div','achievement '+(a.unlocked?'unlocked':'locked'));tile.append(make('strong','',a.name),make('small','',a.desc),make('span','',a.unlocked?'UNLOCKED':'LOCKED'));g.append(tile);}}
 el('passport-open').onclick=()=>{if(busy)return;el('pilot-name').value=black.getName();renderPassport();el('passport').showModal();};
 el('passport-close').onclick=()=>el('passport').close();
 el('pilot-name').oninput=()=>{black.setName(el('pilot-name').value);renderPassport();};
@@ -42,7 +42,7 @@ el('share-card').onclick=async()=>{if(busy||state.card===null)return;try{await b
 el('backup-export').onclick=()=>{try{black.exportBackup();el('backup-status').textContent='Collection backup exported.';}catch(e){el('backup-status').textContent=e.message;}};
 el('backup-import').onclick=()=>el('backup-file').click();
 el('backup-file').onchange=async()=>{const input=el('backup-file'),file=input.files?.[0];if(!file)return;try{if(file.size>512000)throw Error('Backup exceeds 512 KB.');const b=JSON.parse(await file.text());collector.validateBackup(b);if(!confirm('Replace your current collection and pilot call sign with this backup? Export the current collection first if you wish to keep it.'))return;black.restore(b);state.card=null;state.collected=false;state.complete='';save();renderAlbum();el('backup-status').textContent='Backup restored successfully.';}catch(e){el('backup-status').textContent='Restore failed: '+e.message;}finally{input.value='';}};
-async function reveal(r){const card=face();card.classList.remove('foil-reveal');void card.offsetWidth;card.classList.add('foil-reveal');if(r==='mythical'||r==='legendary'){sfx(r);buzz(r==='mythical'?[30,40,30,60]:[20,30,20]);}else if(r==='rare'){sfx('rare');buzz(25);}else buzz(15);if(!reduced()&&r!=='standard')await new Promise(resolve=>setTimeout(resolve,r==='mythical'?700:480));card.classList.remove('foil-reveal');}
+async function reveal(r){const card=face();card.classList.remove('foil-reveal');void card.offsetWidth;card.classList.add('foil-reveal');if(r==='golden'||r==='mythical'||r==='legendary'){sfx(r==='golden'?'mythical':r);buzz(r==='mythical'?[30,40,30,60]:[20,30,20]);}else if(r==='rare'){sfx('rare');buzz(25);}else buzz(15);if(!reduced()&&r!=='standard')await new Promise(resolve=>setTimeout(resolve,r==='golden'?1200:r==='mythical'?700:480));card.classList.remove('foil-reveal');}
 
 const sound=typeof SQSfx!=='undefined'?SQSfx:null;
 function sfx(name){if(sound)sound.play(name);}
@@ -62,10 +62,11 @@ function valid(s) {
     Number.isSafeInteger(s.total) && s.total >= 0 && typeof s.complete === 'string';
 }
 let state = fresh();
+try{el('flight-mode').value=localStorage.getItem('sq.trick.mode')||'Real World';}catch{} if(!el('flight-mode').value)el('flight-mode').value='Real World';
 try {
   const stored = JSON.parse(localStorage.getItem(key));
   if (stored && Array.isArray(stored.bags) && Array.isArray(stored.last) && stored.bags.length===stored.last.length && stored.bags.length>=3 && stored.bags.length<decks.length) { while(stored.bags.length<decks.length) { stored.bags.push([]); stored.last.push(null); } }
-  if (valid(stored)) { state = stored; if(!collector.rarities.includes(state.rarity)){state.rarity='standard';state.collected=false;} state.collected=state.collected===true; if (state.level===5) { state.level=0; state.card=null; state.complete=''; } }
+  if (valid(stored)) { state = stored; if(!localStorage.getItem('sq.trick.migrated')){state.bags=decks.map(()=>[]);state.last=decks.map(()=>null);try{localStorage.setItem('sq.trick.migrated','1');}catch{}} if(state.card!==null&&!sqEligible(state.level,state.card,el('flight-mode').value)){state.card=null;state.collected=false;} if(!collector.rarities.includes(state.rarity)){state.rarity='standard';state.collected=false;} state.collected=state.collected===true; if (state.level===5) { state.level=0; state.card=null; state.complete=''; } }
 } catch {}
 function render() {
   const {level,card,tries,total,complete} = state;
@@ -76,13 +77,13 @@ function render() {
   el('card-serial').textContent=active?black.serial(level,card)+' / BLACK LABEL':'BLACK LABEL / FIELD EDITION';
   el('share-card').hidden=!active;
   el('share-status').textContent='';
-  updateAlbumCount();
+  updateAlbumCount(); if(typeof sqRefresh==='function')sqRefresh();
   el('table').dataset.level=String(level);
   el('rank').textContent=el('rank-bottom').textContent=ranks[level];
   el('suit').textContent=el('suit-bottom').textContent=suits[level];
-  el('remaining').textContent=(state.last[level]===null?decks[level].length:state.bags[level].length)+' / '+decks[level].length+' left in deck';
+  el('remaining').textContent=(state.last[level]===null?decks[level].filter((_,i)=>sqEligible(level,i,el('flight-mode').value)).length:state.bags[level].length)+' / '+decks[level].filter((_,i)=>sqEligible(level,i,el('flight-mode').value)).length+' left in deck';
   el('level').textContent = levels[level].textContent+' deck';
-  el('attempt').textContent = active ? 'Attempt '+tries : level>=3 ? '1 challenge · '+decks[level].length+' messages' : decks[level].length+' challenges';
+  el('attempt').textContent = active ? 'Attempt '+tries : level>=3 ? '1 challenge · '+decks[level].length+' messages' : decks[level].filter((_,i)=>sqEligible(level,i,el('flight-mode').value)).length+' eligible challenges';
   el('title').textContent = active ? decks[level][card][0] : complete ? 'Landed it.' : 'Your next pack';
   el('brief').textContent = active ? decks[level][card][1] : complete ? complete+' complete. Ready for another draw?' : level===3 ? 'No tricks. No pressure. Just fly when it is safe.' : level===4 ? 'Finish your safety checks, leave the bench and fly when conditions are safe.' : level===5 ? 'Adults only: strong language. Draw to reveal. Fly only when safe.' : 'Draw a card before take-off to see your challenge.';
   el('total').textContent = total+' landed this session';
@@ -96,9 +97,10 @@ function save() {
   render();
 }
 function drawCard() {
-  const bag = state.bags[state.level];
+  let bag=state.bags[state.level]=state.bags[state.level].filter(i=>sqEligible(state.level,i,el('flight-mode').value));
+  if(!decks[state.level].some((_,i)=>sqEligible(state.level,i,el('flight-mode').value))){state.level=0;return drawCard();}
   if (!bag.length) {
-    decks[state.level].forEach((_,i) => bag.push(i));
+    decks[state.level].forEach((_,i) => {if(sqEligible(state.level,i,el('flight-mode').value))bag.push(i);});
     for (let i=bag.length-1;i>0;i--) {
       const j = Math.floor(Math.random()*(i+1));
       [bag[i],bag[j]] = [bag[j],bag[i]];
@@ -121,7 +123,7 @@ el('retry').onclick = async () => { if(busy)return;setBusy(true);try{sfx('retry'
 el('landed').onclick = async () => {
   if (busy || state.card === null) return;
   setBusy(true);
-  try{const before=achievementIds();sfx('win');buzz([20,40,20]);await motion('win-out',250);
+  try{const before=achievementIds();sfx('win');buzz([20,40,20]);await motion('win-out',250); if(typeof sqBattleWin==='function')sqBattleWin();
   if(state.collected)collector.complete(state.level,state.card);
   state.complete = decks[state.level][state.card][0];
   state.total++;
