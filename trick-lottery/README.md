@@ -68,3 +68,6 @@ Separate native widget, 25 fixed-wing cards. [ETHOS release and install](ethos/i
 
 ## ETHOS v1.1 preview
 [Fixed-wing web companion](ethos/app/index.html) | [ETHOS v1.1 ZIP](SQ_Trick_Lottery_ETHOS_v1.1.zip). Same 25 cards. Separate local browser records and backup; no radio sync. EdgeTX v2.5 unchanged.
+
+## ETHOS v1.2 preview
+[Web companion](ethos/app/index.html) | [ETHOS v1.2 ZIP](SQ_Trick_Lottery_ETHOS_v1.2.zip). 25 matching flight plates for both platforms of the ETHOS edition (web and radio). EdgeTX v2.5 untouched. Hardware validation pending.

@@ -4,7 +4,8 @@ system={registerWidget=function(w) widget=w end}
 FONT_S=1;FONT_STD=2;FONT_L=3
 EVT_TOUCH=1;TOUCH_END=2;EVT_KEY=3;KEY_ROTARY_RIGHT=4;KEY_ROTARY_LEFT=5;KEY_ENTER_BREAK=6
 local width,height=480,320
-lcd={RGB=function(...) return 0 end,color=function()end,drawFilledRectangle=function()end,font=function()end,drawText=function()end,getTextSize=function(s)return #s*7,16 end,getWindowSize=function()return width,height end,invalidate=function()end}
+local lineCount=0
+lcd={drawLine=function(x,y,x2,y2) assert(x>=0 and y>=0 and x2>=0 and y2>=0 and x<width and x2<width and y<height and y2<height);lineCount=lineCount+1 end,RGB=function(...) return 0 end,color=function()end,drawFilledRectangle=function()end,font=function()end,drawText=function()end,getTextSize=function(s)return #s*7,16 end,getWindowSize=function()return width,height end,invalidate=function()end}
 dofile(arg[1]).init()
 assert(widget.key=="SQWing")
 local w=widget.create()
@@ -23,6 +24,8 @@ assert(seen[25])
 tap(4);assert(not w.sim and not w.card)
 widget.event(w,EVT_KEY,KEY_ROTARY_RIGHT);assert(w.focus==1)
 widget.event(w,EVT_KEY,KEY_ENTER_BREAK);assert(w.card<=20)
-width,height=800,480;widget.paint(w);assert(#w.buttons==4)
+width,height=800,480;widget.paint(w);assert(#w.buttons==4 and lineCount>0)
+for i=1,25 do w.card=i;widget.paint(w) end
+width,height=480,320;for i=1,25 do w.card=i;widget.paint(w) end
 width,height=160,80;widget.paint(w);assert(#w.buttons==0)
 print("ETHOS mock smoke test passed")
