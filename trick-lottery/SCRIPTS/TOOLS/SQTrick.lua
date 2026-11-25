@@ -1,6 +1,6 @@
 -- toolName = "TNS|SQ Trick Lottery|TNE"
--- Squadding Quads | The Trick Lottery | preview 2.4
-local levels={"Beginner","Intermediate","Advanced","OnlyDrones","Bench Pilot","Adults Only"}
+-- Squadding Quads | The Trick Lottery | preview 2.5
+local levels={"Beginner","Intermediate","Advanced","OnlyDrones","Bench Pilot","Adults Only","Fixed Wing"}
 local decks={
 {
 {"Figure of eight","Circle two markers in an eight. Cross the middle at the same height on both passes.","Cinematic","Basic control","eight"},
@@ -113,21 +113,48 @@ local decks={
 {"Fucking Fly It","Stop watching Squadding Quads and go fly your own fucking drone!","Any","Pre-flight checks","s"},
 {"Fucking Fly It","You've spent more time arguing about radios than using the bloody things.","Any","Pre-flight checks","s"},
 {"Fucking Fly It","Fuck perfection. Fuck the excuses. Enjoy yourself and fly the bastard!","Any","Pre-flight checks","s"}
+},
+{
+{"Deck of Wings","Fly one smooth rectangular circuit at steady height and speed.","Fixed Wing","Basic circuit","square"},
+{"Mirror circuit","Fly left- and right-hand circuits with ample clearance.","Fixed Wing","Circuit control","square"},
+{"Horizon keeper","Hold a straight level leg for ten seconds in clear air.","Fixed Wing","Level flight","line"},
+{"The big eight","Fly a wide figure eight at a consistent crossing height.","Fixed Wing","Coordinated turns","eight"},
+{"Three gentle banks","Link three broad alternating turns at comfortable airspeed.","Fixed Wing","Bank control","s"},
+{"Heading hold","Maintain a steady heading for ten seconds in clear air.","Fixed Wing","Level flight","line"},
+{"Parallel lines","Fly two parallel legs with a wide turn between them.","Fixed Wing","Circuit control","line"},
+{"Smooth climb","Climb gently, level out and hold heading with ample clearance.","Fixed Wing","Energy management","line"},
+{"Descent discipline","Make a gentle descent and level out well above ground.","Fixed Wing","Energy management","line"},
+{"Speed step","Change between two comfortable cruise speeds while holding height.","Fixed Wing","Airspeed awareness","line"},
+{"Windward circuit","In suitable wind, fly a wide circuit and note ground-track changes.","Fixed Wing","Wind awareness","square"},
+{"Wind correction","Hold a straight ground track in light crosswind at safe height.","Fixed Wing","Wind awareness","line"},
+{"The long glide","At generous altitude, practise a short reduced-power glide at safe airspeed.","Fixed Wing","Glide practice","line"},
+{"Smooth return","Return from a normal circuit to a stable approach heading.","Fixed Wing","Circuit control","land"},
+{"Go-around","Practise an early go-around from a stable approach with safe clearance.","Fixed Wing","Approach control","land"},
+{"Landing zone","Make a normal landing in a clear designated landing area.","Fixed Wing","Landing practice","land"},
+{"Two tidy landings","Complete two controlled landings, stopping for checks between flights.","Fixed Wing","Landing practice","land"},
+{"Steady camera pass","Fly a smooth filming pass in open air at safe height, away from people.","Fixed Wing","Level flight","line"},
+{"Symmetric arcs","Fly two broad turns of similar size, left then right.","Fixed Wing","Coordinated turns","s"},
+{"Energy review","Review DVR or logs after a normal circuit for smooth speed changes.","Fixed Wing","Flight review","line"},
+{"Ground rush 50","SIM ONLY: Fly a low-level pass above 50 km/h in a simulator.","Fixed Wing Sim","Simulator control","line"},
+{"Axial roll","SIM ONLY: Complete an axial roll and return to level flight.","Fixed Wing Sim","Simulator aerobatics","roll"},
+{"Big sky loop","SIM ONLY: Fly one smooth loop and return to the entry heading.","Fixed Wing Sim","Simulator aerobatics","loop"},
+{"Cuban practice","SIM ONLY: Practise a half Cuban eight with virtual recovery height.","Fixed Wing Sim","Simulator aerobatics","loop"},
+{"Slow flight lab","SIM ONLY: Explore slow flight and recover before losing control.","Fixed Wing Sim","Simulator airspeed","line"}
 }
 }
 
 local rgb=lcd.RGB
 local ink,panel,gold,paper,white,muted=rgb(13,15,17),rgb(30,31,32),rgb(224,191,124),rgb(248,242,225),rgb(247,244,232),rgb(120,125,128)
-local accents={rgb(37,108,72),rgb(26,92,146),rgb(122,65,155),rgb(160,50,110),rgb(113,94,48),rgb(167,35,47)}
+local accents={rgb(37,108,72),rgb(26,92,146),rgb(122,65,155),rgb(160,50,110),rgb(113,94,48),rgb(167,35,47),rgb(35,115,130)}
 local foil={paper,rgb(218,229,239),rgb(248,217,140),rgb(225,211,250),rgb(255,226,125)}
 local edge={gold,rgb(129,158,185),rgb(160,112,25),rgb(126,70,181),rgb(211,147,20)}
 local rarity={"STD","RARE","LEG","MYTH","GOLD"}
-local codes={"BG","IN","AD","OD","BP","18"}
+local codes={"BG","IN","AD","OD","BP","18","FW"}
 local floor,min,max=math.floor,math.min,math.max
-local modes={"Real World","Simulator","TinyWhoop","Freestyle","Cinematic"}
-local options={{"SFX",BOOL,0},{"Motion",BOOL,1},{"Haptic",BOOL,0},{"Mode",VALUE,1,1,5},{"Theme",VALUE,1,1,6}}
+local modes={"Real World","Simulator","TinyWhoop","Freestyle","Cinematic","Fixed Wing"}
+local options={{"SFX",BOOL,0},{"Motion",BOOL,1},{"Haptic",BOOL,0},{"Mode",VALUE,1,1,6},{"Theme",VALUE,1,1,6}}
 local function on(o,k,default) if not o or o[k]==nil then return default end return o[k]==1 or o[k]==true end
-local function update(w,o) local m=max(1,min(5,tonumber(o and o.Mode) or 1));if w.mode and w.mode~=m then w.bags={{},{},{},{},{},{}};w.card=nil;w.view=0;w.focus=1;w.dealAt=nil;w.message=nil;w.unbox=true end;w.mode=m;w.theme=max(1,min(6,tonumber(o and o.Theme) or 1));w.sound=on(o,"SFX",false);w.motion=on(o,"Motion",true);w.haptic=on(o,"Haptic",false) end
+local function update(w,o) local m=max(1,min(6,tonumber(o and o.Mode) or 1));if w.mode and w.mode~=m then w.bags={{},{},{},{},{},{},{}};w.card=nil;w.view=0;w.focus=1;w.dealAt=nil;w.message=nil;w.unbox=true end;w.mode=m;w.theme=max(1,min(6,tonumber(o and o.Theme) or 1));w.sound=on(o,"SFX",false);w.motion=on(o,"Motion",true);w.haptic=on(o,"Haptic",false) end
 local function signal(w,t)
   if w.sound and type(playTone)=="function" then pcall(playTone,t,65,0,0) end
   if w.haptic and type(playHaptic)=="function" then pcall(playHaptic,30,0,0) end
@@ -142,16 +169,19 @@ local function checksum(s)
   return c
 end
 local function empty()
-  return {seq=0,marks=string.rep("0",100),wins={0,0,0,0,0,0},draws=0,slot=2}
+  return {seq=0,marks=string.rep("0",125),wins={0,0,0,0,0,0,0},draws=0,slot=2}
 end
 local function decode(s,slot)
   if type(s)~="string" then return end
-  local body,check=string.match(s,"^(SQ[12][08]|[^\n]+)\n(%d+)\n$")
+  local body,check=string.match(s,"^(SQ[12][058]|[^\n]+)\n(%d+)\n$")
   if not body or checksum(body)~=tonumber(check) then return end
-  local seq,marks,a,b,c,d,e,f,draws=string.match(body,"^SQ[12][08]|(%d+)|([0-5]+)|(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)|(%d+)$")
-  if not seq or (#marks~=60 and #marks~=100) then return end
-  if #marks==60 then marks=marks..string.rep("0",40) end
-  local v={seq=tonumber(seq),marks=marks,wins={tonumber(a),tonumber(b),tonumber(c),tonumber(d),tonumber(e),tonumber(f)},draws=tonumber(draws),slot=slot}
+  local ver,seq,marks,counts,draws=string.match(body,"^(SQ[12][058])|(%d+)|([0-5]+)|([%d,]+)|(%d+)$")
+  if not seq then return end
+  local wins={};for n in string.gmatch(counts,"%d+") do wins[#wins+1]=tonumber(n) end
+  if table.concat(wins,",")~=counts then return end
+  if ver=="SQ25" then if #marks~=125 or #wins~=7 then return end
+  else if (#marks~=60 and #marks~=100) or #wins~=6 then return end;marks=marks..string.rep("0",125-#marks);wins[7]=0 end
+  local v={seq=tonumber(seq),marks=marks,wins=wins,draws=tonumber(draws),slot=slot}
   if v.seq>999999999 or v.draws>999999999 then return end
   for _,x in ipairs(v.wins) do if x>999999999 then return end end
   return v
@@ -175,7 +205,7 @@ end
 local function save(w)
   local d=w.album
   local slot=3-d.slot
-  local body="SQ20|"..d.seq.."|"..d.marks.."|"..table.concat(d.wins,",").."|"..d.draws
+  local body="SQ25|"..d.seq.."|"..d.marks.."|"..table.concat(d.wins,",").."|"..d.draws
   local ok,done=pcall(function()
     if not io or not io.open then return false end
     local f=io.open(paths[slot],"w");if not f then return false end
@@ -186,6 +216,7 @@ local function save(w)
   if not w.unsaved then d.slot=slot end
 end
 local function cardIndex(l,c)
+  if l==7 then return 100+c end
   if l<=3 and c>8 then return 60+({0,14,27})[l]+c-8 end
   return ({0,8,16,24,36,48})[l]+c
 end
@@ -206,7 +237,7 @@ end
 local function summary(d)
   local total,found=0,0
   for _,x in ipairs(d.wins) do total=total+x end
-  for i=1,100 do if string.sub(d.marks,i,i)~="0" then found=found+1 end end
+  for i=1,125 do if string.sub(d.marks,i,i)~="0" then found=found+1 end end
   local originals=true;for i=1,60 do if string.sub(d.marks,i,i)=="0" then originals=false end end
   local awards={d.wins[5]>=1,d.wins[3]>=10,d.wins[6]>=10,total>=25,total>=50,total>=100,originals,total>=500,total>=1000}
   local a=0;for _,x in ipairs(awards) do if x then a=a+1 end end
@@ -215,7 +246,7 @@ local function summary(d)
   return total,found,a,rank,awards
 end
 local function create(zone,o)
-  local w={zone=zone,level=1,bags={{},{},{},{},{},{}},last={},focus=1,seed=getTime()%65536,attempts=0,session=0,album=newest() or empty(),view=0,unbox=true}
+  local w={zone=zone,level=1,bags={{},{},{},{},{},{},{}},last={},focus=1,seed=getTime()%65536,attempts=0,session=0,album=newest() or empty(),view=0,unbox=true}
   update(w,o);return w
 end
 local function rng(w)
@@ -224,6 +255,7 @@ local function rng(w)
 end
 local function eligible(w,l,c)
   local tag=decks[l][c][3]
+  if l==7 then return w.mode==2 or (tag=="Fixed Wing" and (w.mode==1 or w.mode==6)) end
   return w.mode==2 or tag=="Any" or (w.mode==1 and tag~="Simulator") or tag==modes[w.mode]
 end
 local function draw(w)
@@ -252,7 +284,7 @@ local function actions(w)
 end
 local function choose(w,a)
   if a=="Mode" then
-    update(w,{Mode=w.mode%5+1,Theme=w.theme,SFX=w.sound,Motion=w.motion,Haptic=w.haptic});w.focus=1
+    update(w,{Mode=w.mode%6+1,Theme=w.theme,SFX=w.sound,Motion=w.motion,Haptic=w.haptic});w.focus=1
   elseif a=="Theme" then w.theme=w.theme%6+1;w.focus=1
   elseif a=="Info" then w.view=4;w.focus=1
   elseif a=="Play" then w.view=5;w.focus=1
@@ -264,12 +296,12 @@ local function choose(w,a)
     local y,m,d=dt.year,dt.mon,dt.day;if m<3 then y=y-1;m=m+12 end
     local day=365*y+floor(y/4)-floor(y/100)+floor(y/400)+floor((153*(m-3)+2)/5)+d-719469
     local seed=a=="Weekly" and floor((day+3)/7) or day
-    local pool={};for l=1,2 do for c=1,#decks[l] do if decks[l][c][3]~="Simulator" then pool[#pool+1]={l,c} end end end
+    local pool={};if w.mode==6 then for c=1,#decks[7] do if eligible(w,7,c) then pool[#pool+1]={7,c} end end else for l=1,2 do for c=1,#decks[l] do if decks[l][c][3]~="Simulator" then pool[#pool+1]={l,c} end end end end
     local v=pool[(seed*7919+17)%#pool+1];if not eligible(w,v[1],v[2]) then w.message="Choose Real World or Simulator mode";w.view=0;w.focus=1;return end
     w.level=v[1];w.card=v[2];w.rarity=1;w.attempts=1;w.view=0;w.focus=1;w.message=nil;record(w,false)
   elseif a=="Next" then w.view=w.view%3+1;w.focus=2
   elseif a=="Stats" then local d=newest();if d and d.seq>w.album.seq then w.album=d end;w.view=1;w.focus=1
-  elseif a=="Deck" then w.level=w.level%6+1;w.card=nil;w.message=nil;w.focus=1;w.unbox=true;signal(w,660)
+  elseif a=="Deck" then w.level=w.level%7+1;w.card=nil;w.message=nil;w.focus=1;w.unbox=true;signal(w,660)
   elseif a=="Retry" and w.card then w.attempts=w.attempts+1;signal(w,450)
   elseif a=="Landed" and w.card then record(w,true);if w.battle then w.scores[w.pilot]=w.scores[w.pilot]+1;w.pilot=3-w.pilot end;w.session=w.session+1;w.card=nil;w.message="Challenge completed.";w.focus=1;signal(w,1050)
   elseif a=="Draw" or a=="Deal" then draw(w) end
@@ -325,13 +357,13 @@ local function tile(w)
     textFit(8,3,W>=130 and "SQ / TRICK LOTTERY" or "SQ TRICK",SMLSIZE,W-12)
     if H>=40 then textFit(8,22,"PRESS & HOLD",SMLSIZE,W-14) end
     if H>=66 then textFit(8,42,"Choose Full screen",SMLSIZE,W-14) end
-    if H>=90 then textFit(8,62,found.."/100 | "..a.."/9 awards",SMLSIZE,W-14) end
+    if H>=90 then textFit(8,62,found.."/125 | "..a.."/9 awards",SMLSIZE,W-14) end
     return
   end
   local cx=floor(W/2)
   lcd.drawRectangle(5,3,W-10,H-6,gold)
   lcd.drawText(12,8,"SQ / BLACK LABEL",SMLSIZE+gold)
-  lcd.drawText(W-12,8,"V2.4",RIGHT+SMLSIZE+gold)
+  lcd.drawText(W-12,8,"V2.5",RIGHT+SMLSIZE+gold)
   local top=27
   local bottom=H-55
   local ph=bottom-top
@@ -349,11 +381,11 @@ local function tile(w)
   end
   lcd.drawText(cx,bottom+3,"Choose Full screen",CENTER+SMLSIZE+gold)
   local fy=H-32
-  local status=rank.." | "..found.."/100 | "..a.."/9 awards"
-  if lcd.sizeText(status,SMLSIZE)>W-24 then status=found.."/100 cards | "..a.."/9 awards" end
+  local status=rank.." | "..found.."/125 | "..a.."/9 awards"
+  if lcd.sizeText(status,SMLSIZE)>W-24 then status=found.."/125 cards | "..a.."/9 awards" end
   lcd.drawText(cx,fy,status,CENTER+SMLSIZE+white)
   lcd.drawFilledRectangle(13,H-10,W-26,3,muted)
-  if found>0 then lcd.drawFilledRectangle(13,H-10,floor((W-26)*found/100),3,gold) end
+  if found>0 then lcd.drawFilledRectangle(13,H-10,floor((W-26)*found/125),3,gold) end
 end
 local awardNames={"Shed Escapee","BoyWonder Approved","Absolutely Unhinged","Angry Karen Survivor","Touch Grass Pro","One More Pack","The Collector","No Spreadsheets","Forever Humble"}
 local function stats(w,W,H,by)
@@ -367,12 +399,12 @@ local function stats(w,W,H,by)
   elseif w.view==1 then
     lcd.drawText(20,55,rank,MIDSIZE+white)
     lcd.drawText(20,89,"XP "..(total*25).."  |  Landed "..total,SMLSIZE+white)
-    lcd.drawText(20,110,"Collection "..found.."/100   |   Awards "..a.."/9",SMLSIZE+white)
-    lcd.drawFilledRectangle(20,137,W-40,8,ink);lcd.drawFilledRectangle(20,137,floor((W-40)*found/100),8,gold)
+    lcd.drawText(20,110,"Collection "..found.."/125   |   Awards "..a.."/9",SMLSIZE+white)
+    lcd.drawFilledRectangle(20,137,W-40,8,ink);lcd.drawFilledRectangle(20,137,floor((W-40)*found/125),8,gold)
     if by>180 then lcd.drawText(20,153,w.unsaved and "SD save unavailable" or "Collection saved locally",SMLSIZE+muted) end
   elseif w.view==2 then
-    local dx=floor((W-72)/22);local dy=min(24,floor((by-67)/6))
-    for l=1,6 do
+    local dx=floor((W-72)/25);local dy=min(24,floor((by-67)/7))
+    for l=1,7 do
       local y=56+(l-1)*dy
       lcd.drawText(20,y,codes[l],SMLSIZE+white)
       for c=1,#decks[l] do
@@ -413,7 +445,7 @@ local function refresh(w,event,touch)
   end
   acts=actions(w);slot=floor((W-2*pad)/#acts)
   lcd.drawFilledRectangle(0,0,W,H,ink)
-  lcd.drawText(9,3,w.tool and "SQ / TRICK 2.4 / TOOL" or "SQ / TRICK 2.4 / LIVE",SMLSIZE+gold)
+  lcd.drawText(9,3,w.tool and "SQ / TRICK 2.5 / TOOL" or "SQ / TRICK 2.5 / LIVE",SMLSIZE+gold)
   lcd.drawText(W-9,3,w.battle and ("P"..w.pilot.." "..w.scores[1]..":"..w.scores[2]) or ("WINS "..w.session),RIGHT+SMLSIZE+white)
   if w.view>0 then stats(w,W,H,by) else
     local x,y,cw,ch=12,27,W-30,by-37
@@ -436,7 +468,7 @@ local function refresh(w,event,touch)
       local title=card and card[1] or (w.message=="Challenge completed." and "Landed it!" or "Draw a card")
       local tf=MIDSIZE;if lcd.sizeText(title,tf)>cw-20 then tf=0 end
       lcd.drawText(x+10,y+30,title,tf+ink)
-      local body=card and card[2] or w.message or (w.level==6 and "ADULTS ONLY: strong language. Draw to reveal." or "Tap Draw or press ENTER. Deck changes the pack; Mode and Theme change settings. Fly when safe.")
+      local body=card and card[2] or w.message or (w.level==6 and "ADULTS ONLY: strong language. Draw to reveal." or w.level==7 and "Fixed Wing or Real World: 20 field cards. Simulator: all 25. Use on ground." or "Tap Draw or press ENTER. Deck changes the pack; Mode and Theme change settings. Fly when safe.")
       local footer=y+ch-18
       lcd.drawTextLines(x+10,y+57,cw-20,max(1,footer-y-59),body,SMLSIZE+ink)
       lcd.drawFilledRectangle(x+9,footer,cw-18,1,edge[tier])
