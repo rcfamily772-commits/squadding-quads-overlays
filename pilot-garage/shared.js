@@ -1,0 +1,17 @@
+/* SQ Pilot Garage shared profile contract v1.0 */
+(function(root){
+'use strict';
+const KEY='sq.pilotGarage.v1', VERSION=1;
+const videoOptions=[['','Not specified'],['vista','DJI Vista / RunCam Link'],['o3','DJI O3'],['o4','DJI O4 Lite'],['o4pro','DJI O4 Pro'],['avatar','Walksnail Avatar'],['avatarpro','Walksnail Avatar V2 / Pro'],['moon','Walksnail Moonlight'],['gt','Walksnail GT'],['hd1','HDZero Freestyle V1'],['hd2','HDZero Freestyle V2'],['p1','BetaFPV P1'],['ascent','Caddx Ascent Goggles'],['ascentvrx','Caddx Ascent VRX'],['ascentpro','Caddx Ascent VRX Pro'],['analog','Analogue 5.8 GHz'],['custom','Other']];
+const rcOptions=[['','Not specified'],['elrs24','ExpressLRS 2.4 GHz'],['elrs900','ExpressLRS 868/915 MHz'],['elrsdual','ExpressLRS dual-band'],['crossfire','TBS Crossfire'],['tracer','TBS Tracer'],['other','Other']];
+const numberFields={dry:[1,10000],payload:[0,10000],thrust:[1,20000],cells:[1,12],motors:[1,12],propSize:[.5,30],kv:[1,50000],escAmps:[1,500],refCapacity:[1,30000],refWeight:[1,10000],refTime:[.1,180],refPayload:[0,10000],cruise:[1,300]};
+const textFields=['name','type','status','frame','motorModel','propModel','fc','esc','goggles','videoFirmware','receiver','radio','rcFirmware','rates','notes'];
+function clean(p){if(!p||typeof p!=='object'||Array.isArray(p)||typeof p.id!=='string'||!/^[a-zA-Z0-9_-]{1,80}$/.test(p.id))throw Error('Invalid aircraft identifier');const q={id:p.id};for(const k of textFields){if(p[k]!=null&&typeof p[k]!=='string')throw Error('Invalid '+k);q[k]=(p[k]||'').trim().slice(0,k==='notes'?4000:200)}if(!q.name)throw Error('Aircraft name required');for(const [k,[min,max]] of Object.entries(numberFields)){const v=p[k];if(v==null||v===''){q[k]=null;continue}if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max||(['cells','motors','refCapacity'].includes(k)&&!Number.isInteger(v)))throw Error('Invalid '+k);q[k]=v}for(const [k,opts] of [['video',videoOptions],['rc',rcOptions]]){q[k]=p[k]||'';if(!opts.some(o=>o[0]===q[k]))throw Error('Unknown '+k)}q.updated=typeof p.updated==='string'?p.updated.slice(0,40):'';return q}
+function validate(data){if(!data||data.version!==VERSION||!Array.isArray(data.aircraft)||data.aircraft.length>200)throw Error('Unsupported garage file (expected version 1, up to 200 aircraft)');const aircraft=data.aircraft.map(clean),ids=new Set(aircraft.map(p=>p.id));if(ids.size!==aircraft.length)throw Error('Duplicate aircraft IDs');return {version:VERSION,active:ids.has(data.active)?data.active:null,aircraft}}
+function read(){const raw=root.localStorage.getItem(KEY);return raw?validate(JSON.parse(raw)):{version:VERSION,active:null,aircraft:[]}}
+function write(data){const d=validate(data);root.localStorage.setItem(KEY,JSON.stringify(d));return d}
+function fromUrl(){const id=new URLSearchParams(root.location.search).get('aircraft');if(!id)return null;return read().aircraft.find(p=>p.id===id)||null}
+function lipoReady(p){return p.cells===6&&p.motors===4&&p.dry!=null&&p.payload!=null&&p.thrust!=null}
+function referenceReady(p){return p.refCapacity!=null&&p.refWeight!=null&&p.refTime!=null&&p.refPayload!=null}
+root.SQPilotGarage={KEY,VERSION,videoOptions,rcOptions,numberFields,textFields,clean,validate,read,write,fromUrl,lipoReady,referenceReady};
+})(globalThis);
