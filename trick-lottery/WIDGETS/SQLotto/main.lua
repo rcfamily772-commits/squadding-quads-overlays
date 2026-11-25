@@ -1,4 +1,4 @@
--- Squadding Quads | The Trick Lottery | preview 2.2
+-- Squadding Quads | The Trick Lottery | preview 2.3
 local levels={"Beginner","Intermediate","Advanced","OnlyDrones","Bench Pilot","Adults Only"}
 local decks={
 {
@@ -247,10 +247,13 @@ local function actions(w)
   if w.view==4 then return {"Back"} end
   if w.view>0 then return {"Back","Next"} end
   if w.card then return {"Landed","Retry","Deal","Deck","Stats","Info"} end
-  return {"Draw","Deck","Stats","Play"}
+  return {"Draw","Deck","Stats","Play","Mode","Theme"}
 end
 local function choose(w,a)
-  if a=="Info" then w.view=4;w.focus=1
+  if a=="Mode" then
+    update(w,{Mode=w.mode%5+1,Theme=w.theme,SFX=w.sound,Motion=w.motion,Haptic=w.haptic});w.focus=1
+  elseif a=="Theme" then w.theme=w.theme%6+1;w.focus=1
+  elseif a=="Info" then w.view=4;w.focus=1
   elseif a=="Play" then w.view=5;w.focus=1
   elseif a=="Back" then w.view=0;w.focus=1
   elseif a=="Battle" then w.battle=not w.battle;w.pilot=1;w.scores={0,0};w.view=0;w.focus=1
@@ -298,11 +301,11 @@ local function tile(w)
     textFit(8,3,W>=130 and "SQ / TRICK LOTTERY" or "SQ TRICK",SMLSIZE,W-12)
     if H>=40 then textFit(8,22,"Open full screen",SMLSIZE,W-14) end
     if H>=66 then textFit(8,42,found.."/100 cards | "..total.." wins",SMLSIZE,W-14) end
-    if H>=90 then lcd.drawText(8,62,"Select > ENTER",SMLSIZE+gold) end
+    if H>=90 then lcd.drawText(8,62,"Or SYS > TOOLS",SMLSIZE+gold) end
     return
   end
   lcd.drawText(10,5,"SQ / TRICK LOTTERY",SMLSIZE+gold)
-  lcd.drawText(W-10,5,"V2.2",RIGHT+SMLSIZE+gold)
+  lcd.drawText(W-10,5,"V2.3 / VIEW",RIGHT+SMLSIZE+gold)
   local cw=W-28
   local ch=H-76
   local x,y=12,26
@@ -311,16 +314,16 @@ local function tile(w)
   lcd.drawRectangle(x,y,cw,ch,gold)
   lcd.drawFilledRectangle(x+5,y+5,cw-10,19,accents[w.level])
   lcd.drawText(x+10,y+7,levels[w.level],SMLSIZE+white)
-  local label=w.card and (w.level==6 and "Adults Only card" or decks[w.level][w.card][1]) or "READY TO DRAW"
+  local label=w.card and (w.level==6 and "Adults Only card" or decks[w.level][w.card][1]) or "LOTTERY LAUNCHER"
   local tf=MIDSIZE
   if lcd.sizeText(label,tf)>cw-20 then tf=SMLSIZE end
   if ch>=54 then lcd.drawText(x+10,y+28,label,tf+ink) end
   if ch>=92 then
-    lcd.drawTextLines(x+10,y+57,cw-20,ch-59,"Open full screen to draw cards, change decks and view your collection.",SMLSIZE+ink)
+    lcd.drawTextLines(x+10,y+57,cw-20,ch-59,"No input events in this view. Long-press the widget and choose Full screen, or run SQTrick from SYS > TOOLS.",SMLSIZE+ink)
   end
   local fy=H-43
   lcd.drawText(10,fy,found.."/100 cards  |  "..total.." landed",SMLSIZE+white)
-  lcd.drawText(10,H-23,"Select widget > ENTER > Full screen",SMLSIZE+gold)
+  lcd.drawText(10,H-23,"PLAY: SYS > TOOLS > SQTrick",SMLSIZE+gold)
 end
 local awardNames={"Shed Escapee","BoyWonder Approved","Absolutely Unhinged","Angry Karen Survivor","Touch Grass Pro","One More Pack","The Collector","No Spreadsheets","Forever Humble"}
 local function stats(w,W,H,by)
@@ -360,8 +363,9 @@ local function stats(w,W,H,by)
   end
 end
 local function refresh(w,event,touch)
-  -- EdgeTX does not deliver input events to a dashboard widget.
-  if event==nil then tile(w);return end
+  -- Only the one-time script may safely normalize nil to an idle event.
+  if event==nil and not w.tool then tile(w);return end
+  if event==nil then event=0 end
   local W,H=LCD_W,LCD_H
   if W<300 or H<230 then lcd.drawFilledRectangle(0,0,W,H,ink);lcd.drawText(5,5,"Use a colour screen 320x240+",SMLSIZE+white);return end
   local pad=8;local bh=min(43,floor(H/6));local by=H-bh-pad
@@ -370,16 +374,16 @@ local function refresh(w,event,touch)
   local moving=elapsed>=0 and elapsed<(w.duration or 24)
   if not moving then
     w.dealAt=nil
-    if event~=0 and event==EVT_VIRTUAL_NEXT then w.focus=w.focus%#acts+1
-    elseif event~=0 and event==EVT_VIRTUAL_PREV then w.focus=(w.focus-2)%#acts+1
-    elseif event~=0 and event==EVT_VIRTUAL_ENTER then choose(w,acts[w.focus])
+    if event~=0 and (event==EVT_VIRTUAL_NEXT or event==EVT_ROT_RIGHT or event==EVT_VIRTUAL_INC) then w.focus=w.focus%#acts+1
+    elseif event~=0 and (event==EVT_VIRTUAL_PREV or event==EVT_ROT_LEFT or event==EVT_VIRTUAL_DEC) then w.focus=(w.focus-2)%#acts+1
+    elseif event~=0 and (event==EVT_VIRTUAL_ENTER or event==EVT_ENTER_BREAK or event==EVT_ROT_BREAK) then choose(w,acts[w.focus])
     elseif event~=0 and event==EVT_TOUCH_TAP and type(touch)=="table" and type(touch.x)=="number" and type(touch.y)=="number" and touch.y>=by and touch.y<by+bh then
       local dx=touch.x-pad;if dx>=0 and dx<slot*#acts and dx%slot<slot-2 then w.focus=1+floor(dx/slot);choose(w,acts[w.focus]) end
     end
   end
   acts=actions(w);slot=floor((W-2*pad)/#acts)
   lcd.drawFilledRectangle(0,0,W,H,ink)
-  lcd.drawText(9,3,"SQ / TRICK LOTTERY 2.2",SMLSIZE+gold)
+  lcd.drawText(9,3,w.tool and "SQ / TRICK 2.3 / TOOL" or "SQ / TRICK 2.3 / LIVE",SMLSIZE+gold)
   lcd.drawText(W-9,3,w.battle and ("P"..w.pilot.." "..w.scores[1]..":"..w.scores[2]) or ("WINS "..w.session),RIGHT+SMLSIZE+white)
   if w.view>0 then stats(w,W,H,by) else
     local x,y,cw,ch=12,27,W-30,by-37
@@ -402,7 +406,7 @@ local function refresh(w,event,touch)
       local title=card and card[1] or (w.message=="Challenge completed." and "Landed it!" or "Draw a card")
       local tf=MIDSIZE;if lcd.sizeText(title,tf)>cw-20 then tf=0 end
       lcd.drawText(x+10,y+30,title,tf+ink)
-      local body=card and card[2] or w.message or (w.level==6 and "ADULTS ONLY: strong language. Draw to reveal." or "Tap Draw or press ENTER. Deck changes the pack. Fly when safe.")
+      local body=card and card[2] or w.message or (w.level==6 and "ADULTS ONLY: strong language. Draw to reveal." or "Tap Draw or press ENTER. Deck changes the pack; Mode and Theme change settings. Fly when safe.")
       local footer=y+ch-18
       lcd.drawTextLines(x+10,y+57,cw-20,max(1,footer-y-59),body,SMLSIZE+ink)
       lcd.drawFilledRectangle(x+9,footer,cw-18,1,edge[tier])
