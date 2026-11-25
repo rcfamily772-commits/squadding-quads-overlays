@@ -1,4 +1,4 @@
-# The Trick Lottery v2.1 — Black Label
+# The Trick Lottery v2.2 — Black Label
 
 [Play / download / test](https://rcfamily772-commits.github.io/squadding-quads-overlays/trick-lottery/)
 
@@ -12,3 +12,9 @@ Copy WIDGETS/SQLotto/main.lua to the existing SD card widget folder and restart.
 - Reset all six deck bags when flying mode changes, and clear stale animation/message state.
 - Keep the existing SQLotto folder, original card IDs and SQ20 save format. Keep all album-*.txt and trick-*.txt files. Only replace main.lua; delete main.luac if present and restart.
 - Browser game remains v2.0; this is a radio-widget maintenance release. Physical-radio confirmation pending.
+
+## v2.2 — dashboard launcher and interaction hotfix
+- The standard EdgeTX dashboard does not send key/touch events to classic widgets. Select SQLotto, press ENTER, choose Full screen. Double-tap only where supported by firmware. In full screen, tap Draw or press ENTER; Deck cycles the six packs, Deal draws another card. Long-press RTN to leave.
+- Replace the empty dashboard with a responsive card preview, deck, collection status and launch instructions; small zones show a compact prompt. Preview is read-only, not a draw button. No cards are drawn or saved until you explicitly act in full screen.
+- Guard full-screen input coordinates and selection focus; clarify empty deck/status text. All v2.1 Lua compatibility fixes and saved collection data remain. Browser game remains v2.0.
+- Physical V15 confirmation still required; see tests/smoke.lua for a desktop Lua mock test. Test on the ground, with aircraft disarmed.

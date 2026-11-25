@@ -1,4 +1,4 @@
--- Squadding Quads | The Trick Lottery | preview 2.1
+-- Squadding Quads | The Trick Lottery | preview 2.2
 local levels={"Beginner","Intermediate","Advanced","OnlyDrones","Bench Pilot","Adults Only"}
 local decks={
 {
@@ -288,18 +288,39 @@ local function emblem(x,y,r,col)
   end
 end
 local function tile(w)
-  local z=w.zone
-  lcd.drawFilledRectangle(0,0,z.w,z.h,ink)
-  if z.w<40 or z.h<18 then return end
-  lcd.drawFilledRectangle(0,0,3,z.h,gold)
+  local W,H=w.zone.w,w.zone.h
+  if W<1 or H<1 then return end
+  lcd.drawFilledRectangle(0,0,W,H,ink)
+  if W<40 or H<18 then return end
+  lcd.drawFilledRectangle(0,0,3,H,gold)
   local total,found=summary(w.album)
-  lcd.drawText(8,3,z.w>=130 and "SQ / TRICK LOTTERY" or "SQ TRICK",SMLSIZE+gold)
-  if z.h>=40 then textFit(8,22,w.card and (w.level==6 and "Adults Only" or decks[w.level][w.card][1]) or (total.." landed"),0,z.w-14) end
-  if z.h>=66 then
-    lcd.drawText(8,44,found.."/100 collected",SMLSIZE+white)
-    lcd.drawFilledRectangle(8,z.h-7,z.w-16,3,panel)
-    lcd.drawFilledRectangle(8,z.h-7,floor((z.w-16)*found/100),3,gold)
+  if W<230 or H<145 then
+    textFit(8,3,W>=130 and "SQ / TRICK LOTTERY" or "SQ TRICK",SMLSIZE,W-12)
+    if H>=40 then textFit(8,22,"Open full screen",SMLSIZE,W-14) end
+    if H>=66 then textFit(8,42,found.."/100 cards | "..total.." wins",SMLSIZE,W-14) end
+    if H>=90 then lcd.drawText(8,62,"Select > ENTER",SMLSIZE+gold) end
+    return
   end
+  lcd.drawText(10,5,"SQ / TRICK LOTTERY",SMLSIZE+gold)
+  lcd.drawText(W-10,5,"V2.2",RIGHT+SMLSIZE+gold)
+  local cw=W-28
+  local ch=H-76
+  local x,y=12,26
+  lcd.drawFilledRectangle(x+4,y+4,cw,ch,panel)
+  lcd.drawFilledRectangle(x,y,cw,ch,foil[1])
+  lcd.drawRectangle(x,y,cw,ch,gold)
+  lcd.drawFilledRectangle(x+5,y+5,cw-10,19,accents[w.level])
+  lcd.drawText(x+10,y+7,levels[w.level],SMLSIZE+white)
+  local label=w.card and (w.level==6 and "Adults Only card" or decks[w.level][w.card][1]) or "READY TO DRAW"
+  local tf=MIDSIZE
+  if lcd.sizeText(label,tf)>cw-20 then tf=SMLSIZE end
+  if ch>=54 then lcd.drawText(x+10,y+28,label,tf+ink) end
+  if ch>=92 then
+    lcd.drawTextLines(x+10,y+57,cw-20,ch-59,"Open full screen to draw cards, change decks and view your collection.",SMLSIZE+ink)
+  end
+  local fy=H-43
+  lcd.drawText(10,fy,found.."/100 cards  |  "..total.." landed",SMLSIZE+white)
+  lcd.drawText(10,H-23,"Select widget > ENTER > Full screen",SMLSIZE+gold)
 end
 local awardNames={"Shed Escapee","BoyWonder Approved","Absolutely Unhinged","Angry Karen Survivor","Touch Grass Pro","One More Pack","The Collector","No Spreadsheets","Forever Humble"}
 local function stats(w,W,H,by)
@@ -339,25 +360,26 @@ local function stats(w,W,H,by)
   end
 end
 local function refresh(w,event,touch)
+  -- EdgeTX does not deliver input events to a dashboard widget.
   if event==nil then tile(w);return end
   local W,H=LCD_W,LCD_H
   if W<300 or H<230 then lcd.drawFilledRectangle(0,0,W,H,ink);lcd.drawText(5,5,"Use a colour screen 320x240+",SMLSIZE+white);return end
   local pad=8;local bh=min(43,floor(H/6));local by=H-bh-pad
-  local acts=actions(w);local slot=floor((W-2*pad)/#acts)
+  local acts=actions(w);w.focus=max(1,min(#acts,w.focus or 1));local slot=floor((W-2*pad)/#acts)
   local elapsed=w.dealAt and getTime()-w.dealAt or 999
   local moving=elapsed>=0 and elapsed<(w.duration or 24)
   if not moving then
     w.dealAt=nil
-    if event==EVT_VIRTUAL_NEXT then w.focus=w.focus%#acts+1
-    elseif event==EVT_VIRTUAL_PREV then w.focus=(w.focus-2)%#acts+1
-    elseif event==EVT_VIRTUAL_ENTER then choose(w,acts[w.focus])
-    elseif event==EVT_TOUCH_TAP and touch and touch.y>=by and touch.y<by+bh then
+    if event~=0 and event==EVT_VIRTUAL_NEXT then w.focus=w.focus%#acts+1
+    elseif event~=0 and event==EVT_VIRTUAL_PREV then w.focus=(w.focus-2)%#acts+1
+    elseif event~=0 and event==EVT_VIRTUAL_ENTER then choose(w,acts[w.focus])
+    elseif event~=0 and event==EVT_TOUCH_TAP and type(touch)=="table" and type(touch.x)=="number" and type(touch.y)=="number" and touch.y>=by and touch.y<by+bh then
       local dx=touch.x-pad;if dx>=0 and dx<slot*#acts and dx%slot<slot-2 then w.focus=1+floor(dx/slot);choose(w,acts[w.focus]) end
     end
   end
   acts=actions(w);slot=floor((W-2*pad)/#acts)
   lcd.drawFilledRectangle(0,0,W,H,ink)
-  lcd.drawText(9,3,"SQ / TRICK LOTTERY",SMLSIZE+gold)
+  lcd.drawText(9,3,"SQ / TRICK LOTTERY 2.2",SMLSIZE+gold)
   lcd.drawText(W-9,3,w.battle and ("P"..w.pilot.." "..w.scores[1]..":"..w.scores[2]) or ("WINS "..w.session),RIGHT+SMLSIZE+white)
   if w.view>0 then stats(w,W,H,by) else
     local x,y,cw,ch=12,27,W-30,by-37
@@ -377,15 +399,15 @@ local function refresh(w,event,touch)
       lcd.drawText(x+10,y+7,levels[w.level],SMLSIZE+white)
       if w.card then lcd.drawText(x+cw-10,y+7,rarity[tier].." / "..w.attempts,RIGHT+SMLSIZE+white) end
       local card=w.card and decks[w.level][w.card]
-      local title=card and card[1] or (w.message and "Landed it!" or "Draw a card")
+      local title=card and card[1] or (w.message=="Challenge completed." and "Landed it!" or "Draw a card")
       local tf=MIDSIZE;if lcd.sizeText(title,tf)>cw-20 then tf=0 end
       lcd.drawText(x+10,y+30,title,tf+ink)
-      local body=card and card[2] or w.message or (w.level==6 and "ADULTS ONLY: strong language. Draw to reveal." or "Choose a deck. Complete safety checks. Fly when safe.")
+      local body=card and card[2] or w.message or (w.level==6 and "ADULTS ONLY: strong language. Draw to reveal." or "Tap Draw or press ENTER. Deck changes the pack. Fly when safe.")
       local footer=y+ch-18
       lcd.drawTextLines(x+10,y+57,cw-20,max(1,footer-y-59),body,SMLSIZE+ink)
       lcd.drawFilledRectangle(x+9,footer,cw-18,1,edge[tier])
       lcd.drawText(x+10,footer+2,w.card and ("SQ-"..codes[w.level].."-"..string.format("%02d",w.card)) or modes[w.mode],SMLSIZE+ink)
-      lcd.drawText(x+cw-10,footer+2,w.unsaved and "NOT SAVED" or ("LEFT "..#w.bags[w.level]),RIGHT+SMLSIZE+ink)
+      lcd.drawText(x+cw-10,footer+2,w.unsaved and "NOT SAVED" or (#w.bags[w.level]>0 and ("LEFT "..#w.bags[w.level]) or "READY"),RIGHT+SMLSIZE+ink)
     end
   end
   for i,a in ipairs(acts) do local x=pad+(i-1)*slot;local selected=i==w.focus
