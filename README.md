@@ -7,6 +7,8 @@
 
 Independent, Squadding Quads-owned copy of the V5 frosted-glass overlay prototype, reproduced with permission of the original author.
 
+[SQ Reactor v1.0 — animated radio eye candy](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
+
 ## Status
 
 **Frontend source copied, not deployed.** V5 visual styling retained. The subscriber and live-chat APIs are intentionally **disabled** until our own Cloudflare Worker is deployed. Patreon and YouTube supporter integrations are **not live**; sample names appear only with `?demo=1`. No production API credentials or secrets belong in this repository.
