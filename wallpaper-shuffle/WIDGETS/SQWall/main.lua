@@ -1,4 +1,4 @@
--- SQ Wallpaper Shuffle v1.2 | Gallery Black Label | upgrade for v1.1 assets
+-- SQ Wallpaper Shuffle v1.3 | FPV Dads & Sons | upgrade for v1.1 assets
 local folder,art,statePath="/IMAGES/SQWALL/","/WIDGETS/SQWall/art/","/WIDGETS/SQWall/last.txt"
 local floor,ceil,min,max=math.floor,math.ceil,math.min,math.max
 local current,boot,introShown
@@ -24,6 +24,10 @@ local function catalogue()
  end
  pcall(function() for name in dir("/IMAGES/SQWALL") do add(name) end end)
  for _,base in ipairs(starters) do add(base..".png") end
+ -- Explicit fallback for the v1.3 art if directory enumeration is unavailable.
+ for _,name in ipairs({"dads_sons.png","dads_sons_bw.png"}) do
+  pcall(function() local f=io.open(folder..name,"r");if f then io.close(f);add(name) end end)
+ end
  table.sort(names);return names
 end
 local function openImage(path)
@@ -120,6 +124,7 @@ local function refresh(w,event,touch)
   lcd.drawText(W-7,4,index.."/"..#w.names,RIGHT+SMLSIZE+white)
   lcd.drawFilledRectangle(0,bar-22,W,H-bar+22,ink)
   local name=(w.name or "Loading"):gsub("%.png$",""):gsub("_"," ")
+  if name=="dads sons" then name="FPV Dads & Sons" elseif name=="dads sons bw" then name="FPV Dads & Sons B&W" end
   if #name>24 then name=name:sub(1,21).."..." end
   lcd.drawText(7,bar-20,name,SMLSIZE+white)
   if w.unsaved then lcd.drawText(W-7,bar-20,"NOT SAVED",RIGHT+SMLSIZE+gold) end
