@@ -61,3 +61,7 @@ Replace WIDGETS/SQLotto/main.lua, retain all collection TXT files and restart. P
 - Confirmed V15 Ultra launch procedure: press and hold the widget, then choose Full screen. No Tools installation needed.
 - Keep the selected action by name for both rotary/ENTER and touch. Draw becomes Deal on the card screen; Deal, Retry, Deck, Mode, Theme and Next stay selected if available. Landed becomes Draw after completion; entering menus selects Back, and Back restores the original menu action. Avoid accidental Landed selection when a card is drawn.
 - All 100 cards, six decks, five modes, themes and SQ20 save format retained. Browser game remains v2.0. Optional standalone tool uses the same focus logic. Hardware verification of v2.4 pending.
+
+
+## ETHOS v1.0 preview (fixed wing)
+Separate native widget, 25 fixed-wing cards. [ETHOS release and install](ethos/index.html) | [ETHOS ZIP](SQ_Trick_Lottery_ETHOS_v1.0.zip). EdgeTX v2.5 remains unchanged. Hardware validation pending.
