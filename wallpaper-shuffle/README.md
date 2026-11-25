@@ -1,6 +1,14 @@
 # SQ Wallpaper Shuffle
 
-## Latest: v1.3 — FPV Dads & Sons
+## Latest: v1.4 — Unified Gallery
+
+# SQ Wallpaper Shuffle v1.4 — Unified Gallery
+
+Compact shared Toolbox styling, general multi-ZIP importer, downloadable radio-sized gallery kit, manifest fallback for the Lua catalogue. Original 32-image v1.1 release remains available separately. Recovered artwork supplements can be selected alongside it. No global theme or splash replacement. Colour widget only; physical testing pending.
+
+[Open v1.4](https://rcfamily772-commits.github.io/squadding-quads-overlays/wallpaper-shuffle/v1.4/)
+
+## Historical v1.3 — FPV Dads & Sons
 
 [Upgrade page and local ZIP builder](https://rcfamily772-commits.github.io/squadding-quads-overlays/wallpaper-shuffle/v1.3/) · [v1.3 Lua](v1.3/main.lua). Use the supplied full-art ZIP or ready-made v1.3 upgrade package; artwork binaries are not hosted on GitHub. New gallery names: dads_sons.png and optional dads_sons_bw.png (320x240). Existing v1.1 assets retained. Monochrome boot art is separate. Hardware testing pending.
 

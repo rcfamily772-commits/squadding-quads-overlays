@@ -1,4 +1,4 @@
--- SQ Wallpaper Shuffle v1.3 | FPV Dads & Sons | upgrade for v1.1 assets
+-- SQ Wallpaper Shuffle v1.4 | Unified Gallery
 local folder,art,statePath="/IMAGES/SQWALL/","/WIDGETS/SQWall/art/","/WIDGETS/SQWall/last.txt"
 local floor,ceil,min,max=math.floor,math.ceil,math.min,math.max
 local current,boot,introShown
@@ -23,11 +23,22 @@ local function catalogue()
   if type(name)=="string" and #name<=100 and name:lower():match("%.png$") and not name:match("[/\r\n]") and not seen[name:lower()] then names[#names+1]=name;seen[name:lower()]=true end
  end
  pcall(function() for name in dir("/IMAGES/SQWALL") do add(name) end end)
- for _,base in ipairs(starters) do add(base..".png") end
- -- Explicit fallback for the v1.3 art if directory enumeration is unavailable.
- for _,name in ipairs({"dads_sons.png","dads_sons_bw.png"}) do
-  pcall(function() local f=io.open(folder..name,"r");if f then io.close(f);add(name) end end)
+ for _,base in ipairs(starters) do
+  local name=base..".png"
+  pcall(function()
+   local f=io.open(folder..name,"r")
+   if f then io.close(f);add(name);return end
+   local legacy=base=="karen" or base=="workshop" or base=="dealer" or base=="manc"
+   f=io.open(art..base..(legacy and ".bmp" or ".png"),"r")
+   if f then io.close(f);add(name) end
+  end)
  end
+ -- Manifest for radios where directory enumeration is unavailable.
+ pcall(function()
+  local f=io.open(folder.."gallery.txt","r");if not f then return end
+  local contents=io.read(f,8192) or "";io.close(f)
+  for name in contents:gmatch("[^\r\n]+") do add(name) end
+ end)
  table.sort(names);return names
 end
 local function openImage(path)

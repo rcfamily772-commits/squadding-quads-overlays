@@ -1,0 +1,57 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101615"><title>Wallpaper Shuffle | Squadding Quads</title><link rel="stylesheet" href="../../tools/style.css"><style>main{max-width:1080px}.heading{padding:25px 0 15px}.heading h1{font-size:clamp(34px,6vw,60px);letter-spacing:-.055em;line-height:1;margin:8px 0}.heading p{color:var(--muted);margin:8px 0}.panel{border:1px solid var(--border);border-radius:12px;background:#171e1b;padding:18px;margin:16px 0}.panel h2{margin:0 0 12px;font-size:23px}.row{display:flex;gap:8px;flex-wrap:wrap}label{display:block;margin:12px 0;color:var(--muted)}select{display:block;background:#151c19;color:var(--text);border:1px solid #536056;padding:10px;border-radius:6px;font:inherit;width:100%}canvas{width:100%;max-height:260px;object-fit:contain;background:#101615;border-radius:6px;margin:12px 0}figure{margin:0}figure img{width:100%;display:block;border-radius:6px}figcaption{font-size:13px;color:var(--muted)}.gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.muted{color:var(--muted);font-size:13px}button:disabled{opacity:.5;cursor:default}@media(max-width:650px){.gallery{grid-template-columns:repeat(2,1fr)}}</style></head><body><main><header><a class="brand" href="../../tools/"><span class="monogram">SQ</span><span>SQUADDING QUADS<br><small>SOFTWARE COLLECTION</small></span></a><a href="../../tools/">All SQ tools ↗</a></header><div class="heading"><div class="eyebrow">EDGETX / PERSONALISATION · v1.4</div><h1>Wallpaper Shuffle</h1><p>One gallery. A fresh look every time you power up.</p><div class="row"><a class="link primary" href="https://github.com/rcfamily772-commits/squadding-quads-overlays/releases/download/SQwall/SQWall-v1.1.zip">Original 32-image kit</a><a class="link" href="main.lua" download>v1.4 Lua</a><a class="link" href="../../pack-lottery/test-bench/?wallpaper">Radio test</a><a class="link" href="../v1.1/radio-sizes.txt">Radio sizes</a></div></div><section class="panel"><h2>Build your wallpaper pack</h2><label>Radio screen size<select id="size"><option>480x272</option><option>320x240</option><option>480x320</option><option>800x480</option><option>320x480</option></select></label><label>Import wallpaper ZIPs (select one or more)<input type="file" id="file" accept=".zip,application/zip" multiple></label><div class="row"><button id="starter">Use starter gallery</button><button class="primary" id="build" disabled>Download radio-ready ZIP</button></div><canvas id="preview" width="480" height="272" aria-label="Wallpaper preview"></canvas><p id="status" role="status" class="muted">Import the original kit and any additional gallery ZIPs together, or use the starter gallery. Files stay in your browser.</p></section><section class="panel"><h2>Starter gallery</h2><div class="gallery"><figure><img src="../IMAGES/SQWALL/workshop.png" alt="Midnight Workshop"><figcaption>Midnight Workshop</figcaption></figure><figure><img src="../IMAGES/SQWALL/manc.png" alt="Manchester After Dark"><figcaption>Manchester After Dark</figcaption></figure><figure><img src="../IMAGES/SQWALL/karen.png" alt="Angry Karen"><figcaption>Angry Karen</figcaption></figure><figure><img src="../IMAGES/SQWALL/dealer.png" alt="Drone Dealer"><figcaption>Drone Dealer</figcaption></figure></div></section><details class="panel"><summary>Installation &amp; compatibility</summary><ol><li>Back up your SD card. Choose your exact screen size and export a ZIP.</li><li>Extract into the SD root, merging IMAGES and WIDGETS. Replace main.lua and remove any stale main.luac. Keep last.txt and existing splash.</li><li>Restart, assign SQWall to a colour-screen widget zone, and open full screen for Prev, Lucky, Next and Clean.</li></ol><p class="muted">Monochrome radios use static artwork only. The widget displays artwork in its assigned zone, not the global radio theme. Physical-radio testing of v1.4 is pending. Existing gallery PNGs remain on the radio when merging.</p></details><footer><a href="../../tools/">SQ Tools</a><a href="https://github.com/rcfamily772-commits/squadding-quads-overlays/tree/main/wallpaper-shuffle/v1.4">Source / release notes</a><a href="../v1.3/">Previous version</a></footer></main><script>
+"use strict";const $=x=>document.getElementById(x),enc=new TextEncoder(),dec=new TextDecoder(),table=Uint32Array.from({length:256},(_,n)=>{for(let k=0;k<8;k++)n=n&1?0xedb88320^(n>>>1):n>>>1;return n>>>0});let selected=null,revision=0;function crc(a){let c=0xffffffff;for(let b of a)c=table[(c^b)&255]^(c>>>8);return(c^0xffffffff)>>>0}function status(s){$("status").textContent=s}
+function readZip(a){const v=new DataView(a.buffer,a.byteOffset,a.byteLength);let e=a.length-22;while(e>=Math.max(0,a.length-65557)&&v.getUint32(e,true)!==0x06054b50)e--;if(e<Math.max(0,a.length-65557))throw Error("ZIP directory not found.");let n=v.getUint16(e+10,true),p=v.getUint32(e+16,true),map=new Map();if(n>3000)throw Error("Too many ZIP entries.");for(let i=0;i<n;i++){if(p+46>a.length||v.getUint32(p,true)!==0x02014b50)throw Error("Invalid ZIP directory.");let flags=v.getUint16(p+8,true),method=v.getUint16(p+10,true),check=v.getUint32(p+16,true),c=v.getUint32(p+20,true),u=v.getUint32(p+24,true),nl=v.getUint16(p+28,true),xl=v.getUint16(p+30,true),cl=v.getUint16(p+32,true),off=v.getUint32(p+42,true),name=dec.decode(a.slice(p+46,p+46+nl));if(off+30>a.length||v.getUint32(off,true)!==0x04034b50)throw Error("Invalid ZIP entry.");let start=off+30+v.getUint16(off+26,true)+v.getUint16(off+28,true);if(start+c>a.length||flags&1)throw Error("Encrypted or truncated ZIP.");map.set(name,{method,check,c,u,start});p+=46+nl+xl+cl}return{a,map}}
+async function extract(z,name){let e=z.map.get(name);if(!e)throw Error("Missing "+name);if(e.u>5e6)throw Error("Artwork entry too large.");let b=z.a.slice(e.start,e.start+e.c);if(e.method===8)b=new Uint8Array(await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());else if(e.method!==0)throw Error("Unsupported ZIP compression.");if(b.length!==e.u||crc(b)!==e.check)throw Error("ZIP checksum mismatch.");return b}
+function pack(files){let chunks=[],central=[],off=0,cs=0;for(let [path,a] of files){let n=enc.encode(path),check=crc(a),l=new Uint8Array(30+n.length),v=new DataView(l.buffer);v.setUint32(0,0x04034b50,true);v.setUint16(4,20,true);v.setUint16(6,0x800,true);v.setUint16(12,33,true);v.setUint32(14,check,true);v.setUint32(18,a.length,true);v.setUint32(22,a.length,true);v.setUint16(26,n.length,true);l.set(n,30);let h=new Uint8Array(46+n.length),d=new DataView(h.buffer);d.setUint32(0,0x02014b50,true);d.setUint16(4,20,true);d.setUint16(6,20,true);d.setUint16(8,0x800,true);d.setUint16(14,33,true);d.setUint32(16,check,true);d.setUint32(20,a.length,true);d.setUint32(24,a.length,true);d.setUint16(28,n.length,true);d.setUint32(42,off,true);h.set(n,46);chunks.push(l,a);central.push(h);off+=l.length+a.length;cs+=h.length}let e=new Uint8Array(22),v=new DataView(e.buffer);v.setUint32(0,0x06054b50,true);v.setUint16(8,files.length,true);v.setUint16(10,files.length,true);v.setUint32(12,cs,true);v.setUint32(16,off,true);return new Blob([...chunks,...central,e],{type:"application/zip"})}
+
+async function choose(){
+ const rev=++revision;selected=null;$("build").disabled=true;
+ const size=$("size").value,[w,h]=size.split("x").map(Number),files=new Map();
+ try{
+  const archives=[...$("file").files];if(!archives.length){status("Select one or more artwork ZIPs, or use the starter gallery.");return}
+  status("Reading artwork…");
+  for(const f of archives){
+   if(f.size>100e6||f.size<22)throw Error("Choose a ZIP under 100 MB.");
+   const z=readZip(new Uint8Array(await f.arrayBuffer()));
+   for(const name of z.map.keys()){
+    const p=name.replace(/\\/g,"/"),parts=p.split("/"),base=parts.at(-1);
+    if(!/^[a-z0-9_-]+\.png$/i.test(base))continue;
+    if(!p.toLowerCase().includes("/images/sqwall/")&&!p.toLowerCase().startsWith("images/sqwall/"))continue;
+    if(!parts.includes(size)&&!parts.includes("Colour_"+size)&&!p.toLowerCase().startsWith("images/sqwall/"))continue;
+    const b=await extract(z,name);const im=await createImageBitmap(new Blob([b],{type:"image/png"}));
+    if(im.width===w&&im.height===h)files.set("IMAGES/SQWALL/"+base.toLowerCase(),b);im.close();
+   }
+  }
+  if(rev!==revision)return;
+  if(!files.size)throw Error("No gallery PNGs match this resolution. Choose the appropriate size or another archive.");
+  await show(files,w,h,rev);
+ }catch(e){if(rev===revision)status(e.message)}
+}
+async function show(files,w,h,rev){
+ const first=files.values().next().value,im=await createImageBitmap(new Blob([first],{type:"image/png"}));
+ if(rev!==revision){im.close();return}
+ const c=$("preview");c.width=w;c.height=h;c.getContext("2d").drawImage(im,0,0);im.close();
+ selected={files,size:w+"x"+h};$("build").disabled=false;status(files.size+" wallpapers ready. Export a single radio-ready ZIP.");
+}
+$("file").onchange=choose;$("size").onchange=choose;
+$("starter").onclick=async()=>{
+ const rev=++revision;selected=null;$("build").disabled=true;
+ const [w,h]=$("size").value.split("x").map(Number),files=new Map();
+ try{
+  for(const name of ["workshop","manc","karen","dealer"]){
+   const r=await fetch("../IMAGES/SQWALL/"+name+".png");if(!r.ok)throw Error("Starter image unavailable.");
+   const im=await createImageBitmap(await r.blob()),c=document.createElement("canvas");c.width=w;c.height=h;
+   const scale=Math.max(w/im.width,h/im.height);c.getContext("2d").drawImage(im,(w-im.width*scale)/2,(h-im.height*scale)/2,im.width*scale,im.height*scale);im.close();
+   files.set("IMAGES/SQWALL/"+name+".png",new Uint8Array(await(await new Promise(resolve=>c.toBlob(resolve,"image/png"))).arrayBuffer()));
+  }await show(files,w,h,rev);
+ }catch(e){if(rev===revision)status(e.message)}
+};
+$("build").onclick=async()=>{
+ if(!selected)return;const s=selected;$("build").disabled=true;
+ try{const r=await fetch("./main.lua");if(!r.ok)throw Error("Lua unavailable.");
+ const a=new Uint8Array(await r.arrayBuffer());if(!dec.decode(a).includes("v1.4 | Unified Gallery"))throw Error("Wrong Lua version.");
+ const manifest=enc.encode([...s.files.keys()].map(x=>x.split("/").at(-1)).join("\n")+"\n");
+ const z=pack([...s.files,["IMAGES/SQWALL/gallery.txt",manifest],["WIDGETS/SQWall/main.lua",a]]);
+ const u=URL.createObjectURL(z),l=document.createElement("a");l.href=u;l.download="SQWall-v1.4-"+s.size+".zip";l.click();setTimeout(()=>URL.revokeObjectURL(u),30000);status("ZIP ready. Extract into your SD root; retain existing settings and splash.");
+ }catch(e){status(e.message)}finally{$("build").disabled=!selected}
+};</script></body></html>
