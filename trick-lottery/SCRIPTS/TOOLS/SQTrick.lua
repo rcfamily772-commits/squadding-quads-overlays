@@ -1,5 +1,5 @@
 -- toolName = "TNS|SQ Trick Lottery|TNE"
--- Squadding Quads | The Trick Lottery | preview 2.5
+-- Squadding Quads | The Trick Lottery | preview 2.6
 local levels={"Beginner","Intermediate","Advanced","OnlyDrones","Bench Pilot","Adults Only","Fixed Wing"}
 local decks={
 {
@@ -154,7 +154,7 @@ local floor,min,max=math.floor,math.min,math.max
 local modes={"Real World","Simulator","TinyWhoop","Freestyle","Cinematic","Fixed Wing"}
 local options={{"SFX",BOOL,0},{"Motion",BOOL,1},{"Haptic",BOOL,0},{"Mode",VALUE,1,1,6},{"Theme",VALUE,1,1,6}}
 local function on(o,k,default) if not o or o[k]==nil then return default end return o[k]==1 or o[k]==true end
-local function update(w,o) local m=max(1,min(6,tonumber(o and o.Mode) or 1));if w.mode and w.mode~=m then w.bags={{},{},{},{},{},{},{}};w.card=nil;w.view=0;w.focus=1;w.dealAt=nil;w.message=nil;w.unbox=true end;w.mode=m;w.theme=max(1,min(6,tonumber(o and o.Theme) or 1));w.sound=on(o,"SFX",false);w.motion=on(o,"Motion",true);w.haptic=on(o,"Haptic",false) end
+local function update(w,o) if w.judge and (w.judge.state=="wait" or w.judge.state=="record") then return end;local m=max(1,min(6,tonumber(o and o.Mode) or 1));if w.mode and w.mode~=m then w.bags={{},{},{},{},{},{},{}};w.card=nil;w.view=0;w.focus=1;w.dealAt=nil;w.message=nil;w.unbox=true end;w.mode=m;w.theme=max(1,min(6,tonumber(o and o.Theme) or 1));w.sound=on(o,"SFX",false);w.motion=on(o,"Motion",true);w.haptic=on(o,"Haptic",false) end
 local function signal(w,t)
   if w.sound and type(playTone)=="function" then pcall(playTone,t,65,0,0) end
   if w.haptic and type(playHaptic)=="function" then pcall(playHaptic,30,0,0) end
@@ -275,11 +275,181 @@ local function draw(w)
   w.dealAt=w.motion and getTime() or nil
   signal(w,w.rarity>=3 and 1320 or 880)
 end
+-- SQ Trick Judge EXPERIMENTAL: bounded 5 Hz polling, never writes controls.
+-- Profiles measure one limited proxy, not proof of completing a manoeuvre.
+local judgeProfiles={
+ [1]={[3]={"alt",5,"Height consistency"},[5]={"alt",5,"Height consistency"},[9]={"alt",5,"Height consistency"},[10]={"hover",5,"Hover stability"},[18]={"heading",5,"Heading consistency"},[21]={"heading",5,"Heading consistency"}},
+ [7]={[3]={"level",10,"Level leg stability"},[6]={"heading",10,"Heading consistency"},[12]={"heading",5,"Ground-track consistency"},[18]={"level",5,"Level pass stability"}}
+}
+local function jread(name,lo,hi)
+ if type(getSourceValue)~="function" then return nil end
+ local ok,v,current,fresh=pcall(getSourceValue,name)
+ if ok and current and fresh and type(v)=="number" and v==v and v>=lo and v<=hi then return v end
+end
+local function jarm(j)
+ local v=jread("ch"..j.channel,-1024,1024)
+ if v==nil then return nil end
+ v=v*j.sign
+ if v>700 then return true elseif v< -700 then return false end
+end
+local function jprofile(w)
+ local p=judgeProfiles[w.level]
+ return p and p[w.card]
+end
+local function jsetup(w)
+ local p=jprofile(w)
+ w.judge={state="setup",profile=p,channel=w.jchannel or 5,sign=w.jsign or 1,card=w.card,level=w.level,title=decks[w.level][w.card][1]}
+ w.view=6;w.focus=1
+ if w.tool then w.judge.note="Use dashboard widget, not Tools."
+ elseif w.mode==2 then w.judge.note="Live aircraft only; simulator not supported."
+ elseif not p then w.judge.note="This card is not supported yet." end
+end
+local function jdata(j)
+ local sats=jread("Sats",0,100)
+ if not sats or sats<6 then return end
+ local speed=jread("GSpd",0,300)
+ if speed==nil then return end
+ local kind=j.profile[1]
+ local alt,heading
+ if kind~="heading" then alt=jread("Alt",-1000,12000);if alt==nil then return end end
+ if kind=="heading" or kind=="level" then heading=jread("Hdg",0,360);if heading==nil then return end end
+ return speed,alt,heading
+end
+local function jstart(w)
+ local j=w.judge
+ if not j or j.state~="setup" or not j.profile or w.tool or w.mode==2 then return end
+ if jarm(j)~=false then j.note="Set selected ARM channel to DISARMED.";return end
+ local speed,alt=jdata(j)
+ if speed==nil then j.note="Missing fresh GPS / required sensors.";return end
+ w.jchannel=j.channel;w.jsign=j.sign
+ j.baseAlt=alt;j.state="wait";j.created=getTime();j.last=nil;j.window={};j.valid=0;j.polls=0;j.best=nil;j.bestParts=nil;j.high=0;j.low=0;j.note=nil
+ w.focus=1
+end
+local function jfinish(j,reason)
+ j.state="result";j.reason=reason
+ local coverage=j.polls>0 and j.valid/j.polls or 0
+ j.coverage=coverage
+ if reason or not j.best or coverage<.75 then
+  j.score=nil;j.reason=reason or "Insufficient continuous fresh data"
+ else
+  j.score=j.best
+  j.confidence=coverage>=.9 and "MEDIUM" or "LOW"
+ end
+end
+local function jclamp(x) return max(0,min(100,floor(x+.5))) end
+local function jwindow(j)
+ local rows=j.window
+ local n=#rows
+ if n<2 or rows[n][1]-rows[1][1]<j.profile[2]*100 then return end
+ local aMin,aMax,spread,sMax=1e9,-1e9,0,0
+ local first=rows[1][4]
+ for i=1,n do
+  local row=rows[i]
+  if row[3] then aMin=min(aMin,row[3]);aMax=max(aMax,row[3]) end
+  if row[4] then spread=max(spread,math.abs((row[4]-first+180)%360-180)) end
+  sMax=max(sMax,row[2])
+ end
+ local kind=j.profile[1]
+ local altitude=jclamp(100-(aMax-aMin)*10)
+ local course=jclamp(100-spread*2)
+ local hover=jclamp(100-sMax*12)
+ local score
+ if kind=="alt" then score=altitude
+ elseif kind=="heading" then score=course
+ elseif kind=="hover" then score=jclamp((altitude+hover)/2)
+ else score=jclamp((altitude+course)/2) end
+ if not j.best or score>j.best then j.best=score;j.bestParts={altitude=altitude,course=course,hover=hover} end
+end
+local function judgeTick(w)
+ local j=w.judge
+ if not j or (j.state~="wait" and j.state~="record") then return end
+ local now=getTime()
+ if now<j.created or now-j.created>90000 then jfinish(j,"Recording timeout");w.focus=1;return end
+ if j.last and now-j.last<20 then return end
+ if j.state=="record" and j.last and now-j.last>60 then jfinish(j,"Recorder interrupted");w.focus=1;return end
+ j.last=now
+ local armed=jarm(j)
+ if armed==nil then jfinish(j,"ARM channel unavailable");w.focus=1;return end
+ if j.state=="wait" then
+  j.high=armed and j.high+1 or 0
+  if j.high>=2 then j.state="record";j.started=now;j.low=0 end
+  return
+ end
+ if not armed then
+  j.low=j.low+1
+  if j.low>=2 then jfinish(j);w.focus=1 end
+  return
+ end
+ j.low=0;j.polls=j.polls+1
+ local speed,alt,heading=jdata(j)
+ if speed==nil then j.window={};return end
+ j.valid=j.valid+1
+ local kind=j.profile[1]
+ -- Avoid awarding a stationary ground recording. Hover requires height above
+ -- the observed pre-arm baseline; other profiles require GPS motion.
+ local eligible
+ if kind=="hover" then eligible=alt and j.baseAlt and alt-j.baseAlt>=3
+ else eligible=speed>=5 end
+ if not eligible then j.window={};return end
+ local rows=j.window
+ rows[#rows+1]={now,speed,alt,heading}
+ while #rows>2 and now-rows[2][1]>=j.profile[2]*100 do table.remove(rows,1) end
+ if #rows>56 then table.remove(rows,1) end
+ jwindow(j)
+end
+local function judgeAction(w,a)
+ local j=w.judge
+ if not j then return end
+ if j.state=="setup" then
+  if a=="Back" then w.judge=nil;w.view=0;w.focus=7
+  elseif a=="CH-" then j.channel=max(5,j.channel-1);j.note=nil
+  elseif a=="CH+" then j.channel=min(16,j.channel+1);j.note=nil
+  elseif a=="Invert" then j.sign=-j.sign;j.note=nil
+  elseif a=="Start" then jstart(w) end
+ elseif j.state=="wait" and a=="Cancel" then
+  if jarm(j)==false then w.judge=nil;w.view=0;w.focus=7 end
+ elseif j.state=="result" and a=="Back" then w.judge=nil;w.view=0;w.focus=7 end
+end
+local function judgeScreen(w,W,by)
+ local j=w.judge
+ lcd.drawFilledRectangle(10,26,W-20,by-34,panel)
+ lcd.drawRectangle(10,26,W-20,by-34,gold)
+ lcd.drawText(19,31,"TRICK JUDGE / EXPERIMENTAL",SMLSIZE+gold)
+ lcd.drawText(19,51,j.title,SMLSIZE+white)
+ if j.state=="setup" then
+  lcd.drawText(19,70,"ARM CH"..j.channel.." / "..(j.sign==1 and "HIGH" or "LOW"),MIDSIZE+white)
+  local armed=jarm(j)
+  lcd.drawText(19,98,armed==nil and "ARM: unknown" or (armed and "ARM: ACTIVE" or "ARM: DISARMED"),SMLSIZE+gold)
+  local ready=j.profile and jdata(j)~=nil
+  lcd.drawText(19,117,ready and "Required sensors: detected" or "Required sensors: unavailable",SMLSIZE+white)
+  local msg=j.note or (not j.profile and "Unsupported card." or "Verify channel/polarity with props off. Start only disarmed.")
+  lcd.drawTextLines(19,136,W-38,max(1,by-145),msg,SMLSIZE+white)
+ elseif j.state=="wait" or j.state=="record" then
+  lcd.drawText(19,73,j.state=="wait" and "READY / WAITING FOR ARM" or "RECORDING",MIDSIZE+gold)
+  lcd.drawTextLines(19,104,W-38,max(1,by-112),"Fly normally. Do not interact in flight. Land and disarm to finish.",SMLSIZE+white)
+ elseif j.score==nil then
+  lcd.drawText(19,73,"INSUFFICIENT DATA",MIDSIZE+gold)
+  lcd.drawTextLines(19,106,W-38,max(1,by-114),j.reason or "No supported sample window.",SMLSIZE+white)
+ else
+  lcd.drawText(19,70,tostring(j.score).."/100",DBLSIZE+gold)
+  lcd.drawText(19,108,j.profile[3].." / best "..j.profile[2].."s",SMLSIZE+white)
+  lcd.drawText(19,128,"Confidence: "..j.confidence.." | Fresh: "..floor(j.coverage*100).."%",SMLSIZE+white)
+  lcd.drawTextLines(19,146,W-38,max(1,by-154),"Estimate only. Not proof of trick completion.",SMLSIZE+muted)
+ end
+end
+
 local function actions(w)
+  if w.view==6 then
+    local j=w.judge
+    if j.state=="setup" then return {"Back","CH-","CH+","Invert","Start"} end
+    if j.state=="wait" then return {"Cancel"} end
+    if j.state=="record" then return {"Recording"} end
+    return {"Back"}
+  end
   if w.view==5 then return {"Back","Daily","Weekly","Battle"} end
   if w.view==4 then return {"Back"} end
   if w.view>0 then return {"Back","Next"} end
-  if w.card then return {"Landed","Retry","Deal","Deck","Stats","Info"} end
+  if w.card then return {"Landed","Retry","Deal","Deck","Stats","Info","Score It"} end
   return {"Draw","Deck","Stats","Play","Mode","Theme"}
 end
 local function choose(w,a)
@@ -309,6 +479,8 @@ end
 -- Preserve the action identity across changing button rows, not the index.
 local function perform(w,a)
   if not a then return end
+  if w.view==6 then judgeAction(w,a);return end
+  if a=="Score It" then jsetup(w);return end
   local previousView=w.view
   if previousView==0 and (a=="Stats" or a=="Info" or a=="Play") then
     w.returnAction=a
@@ -353,6 +525,10 @@ local function tile(w)
   if W<40 or H<18 then return end
   local total,found,a,rank=summary(w.album)
   lcd.drawFilledRectangle(0,0,3,H,gold)
+  if w.judge and (w.judge.state=="wait" or w.judge.state=="record") then
+    if H>=40 then lcd.drawText(8,5,"SQ JUDGE / EXP",SMLSIZE+gold);lcd.drawText(8,23,w.judge.state=="wait" and "WAIT ARM" or "RECORDING",SMLSIZE+white) end
+    return
+  end
   if W<230 or H<145 then
     textFit(8,3,W>=130 and "SQ / TRICK LOTTERY" or "SQ TRICK",SMLSIZE,W-12)
     if H>=40 then textFit(8,22,"PRESS & HOLD",SMLSIZE,W-14) end
@@ -363,7 +539,7 @@ local function tile(w)
   local cx=floor(W/2)
   lcd.drawRectangle(5,3,W-10,H-6,gold)
   lcd.drawText(12,8,"SQ / BLACK LABEL",SMLSIZE+gold)
-  lcd.drawText(W-12,8,"V2.5",RIGHT+SMLSIZE+gold)
+  lcd.drawText(W-12,8,"V2.6",RIGHT+SMLSIZE+gold)
   local top=27
   local bottom=H-55
   local ph=bottom-top
@@ -425,6 +601,7 @@ local function stats(w,W,H,by)
   end
 end
 local function refresh(w,event,touch)
+  judgeTick(w)
   -- Only the one-time script may safely normalize nil to an idle event.
   if event==nil and not w.tool then tile(w);return end
   if event==nil then event=0 end
@@ -434,7 +611,7 @@ local function refresh(w,event,touch)
   local acts=actions(w);w.focus=max(1,min(#acts,w.focus or 1));local slot=floor((W-2*pad)/#acts)
   local elapsed=w.dealAt and getTime()-w.dealAt or 999
   local moving=elapsed>=0 and elapsed<(w.duration or 24)
-  if not moving then
+  if not moving and not (w.judge and w.judge.state=="record") then
     w.dealAt=nil
     if event~=0 and (event==EVT_VIRTUAL_NEXT or event==EVT_ROT_RIGHT or event==EVT_VIRTUAL_INC) then w.focus=w.focus%#acts+1
     elseif event~=0 and (event==EVT_VIRTUAL_PREV or event==EVT_ROT_LEFT or event==EVT_VIRTUAL_DEC) then w.focus=(w.focus-2)%#acts+1
@@ -445,9 +622,9 @@ local function refresh(w,event,touch)
   end
   acts=actions(w);slot=floor((W-2*pad)/#acts)
   lcd.drawFilledRectangle(0,0,W,H,ink)
-  lcd.drawText(9,3,w.tool and "SQ / TRICK 2.5 / TOOL" or "SQ / TRICK 2.5 / LIVE",SMLSIZE+gold)
+  lcd.drawText(9,3,w.tool and "SQ / TRICK 2.6 / TOOL" or "SQ / TRICK 2.6 / LIVE",SMLSIZE+gold)
   lcd.drawText(W-9,3,w.battle and ("P"..w.pilot.." "..w.scores[1]..":"..w.scores[2]) or ("WINS "..w.session),RIGHT+SMLSIZE+white)
-  if w.view>0 then stats(w,W,H,by) else
+  if w.view==6 then judgeScreen(w,W,by) elseif w.view>0 then stats(w,W,H,by) else
     local x,y,cw,ch=12,27,W-30,by-37
     local themes={nil,rgb(80,100,62),rgb(40,160,180),rgb(168,86,49),rgb(77,82,88),rgb(27,118,150)};local ac=themes[w.theme] or accents[w.level];local tier=w.card and w.rarity or 1
     lcd.drawFilledRectangle(x+6,y+5,cw,ch,panel);lcd.drawRectangle(x+6,y+5,cw,ch,ac)

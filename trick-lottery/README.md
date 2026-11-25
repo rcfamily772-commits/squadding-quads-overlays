@@ -1,4 +1,4 @@
-# The Trick Lottery v2.5 — Fixed Wing Edition
+# The Trick Lottery v2.6 — Experimental Trick Judge
 
 125 cards, seven decks, six flying modes. 25 new fixed-wing cards (20 field, five simulator-only). Original 100 IDs unchanged. Radio v2.5 migrates 60/100-card saves to 125-card SQ25 format. Back up all SQLotto TXT files; older versions cannot read new SQ25 saves. Browser storage keys unchanged. On-radio tests pending.
 
@@ -71,3 +71,15 @@ Separate native widget, 25 fixed-wing cards. [ETHOS release and install](ethos/i
 
 ## ETHOS v1.2 preview
 [Web companion](ethos/app/index.html) | [ETHOS v1.2 ZIP](SQ_Trick_Lottery_ETHOS_v1.2.zip). 25 matching flight plates for both platforms of the ETHOS edition (web and radio). EdgeTX v2.5 untouched. Hardware validation pending.
+
+## EdgeTX v2.6 — SQ Trick Judge (EXPERIMENTAL)
+**Experimental feature — more testing needed.** Scores are unvalidated estimates of a limited measurable proxy, not proof a manoeuvre was completed or performed safely. No effect on XP, collection or flight control. Not a flight safety system.
+
+Supported cards (10): Beginner The slow lap, Hold the horizon, Gentle S-turn (height consistency); Precision hover (GPS speed and height); Heading hold, Long lens line (GPS course); Fixed Wing Horizon keeper, Steady camera pass (height/course); Heading hold, Wind correction (GPS course). Other cards, including fast rolls/flips and proximity, are not scored. GPS heading is ground track, not aircraft attitude. Alt in metres, GSpd in km/h, Hdg in degrees, Sats >=6 required; use standard unmodified CRSF sensor units. Check discovered fresh sensors on your actual radio. No unit inference.
+
+1. Open widget in interactive full screen, draw card, select Score It. Choose actual ARM output channel CH5–16 and polarity. Default CH5 high is only a starting point, NOT a verified configuration. With props removed, check ARM display changes correctly when toggling actual arm switch and that aircraft state agrees. Return disarmed before Start.
+2. Start waits for two high ARM polls; then samples at up to 5 Hz using refresh/background. Return to normal dashboard if preferred. Do not interact during flight. Disarm after landing; two low polls finalize. Do not run the standalone Tools script while flying. Keep widget loaded; timeout 15 minutes; interrupted callback or invalid ARM state aborts score. Cancel while waiting only if selected channel reads disarmed.
+3. Review result after landing. Best continuous 5/10-second eligible window, not whole-trick detection; fresh telemetry coverage >=75%, medium/low confidence only. Height and course penalties are provisional; no score if insufficient. Session-only result, no personal best persistence yet. Flight speed is an eligibility gate, not rewarded. Hover requires 3 m above pre-arm altitude and valid GPS; no encouragement to fly near obstacles. Do not change flying behaviour just to obtain a score.
+
+EdgeTX APIs: getSourceValue fresh/current flags and widget background callback. Telemetry polling does not guarantee distinct RF packets. Actual sensor availability, scoring accuracy and CPU/memory overhead require bench and flight validation. Web v2.5 and ETHOS v1.2 unchanged. SQ25 collection format unchanged. Install only updated main.lua and restart. No additional options or scripts needed.
+
