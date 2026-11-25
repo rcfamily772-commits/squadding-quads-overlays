@@ -1,4 +1,4 @@
--- Squadding Quads | The Trick Lottery | preview 2.0
+-- Squadding Quads | The Trick Lottery | preview 2.1
 local levels={"Beginner","Intermediate","Advanced","OnlyDrones","Bench Pilot","Adults Only"}
 local decks={
 {
@@ -126,7 +126,7 @@ local floor,min,max=math.floor,math.min,math.max
 local modes={"Real World","Simulator","TinyWhoop","Freestyle","Cinematic"}
 local options={{"SFX",BOOL,0},{"Motion",BOOL,1},{"Haptic",BOOL,0},{"Mode",VALUE,1,1,5},{"Theme",VALUE,1,1,6}}
 local function on(o,k,default) if not o or o[k]==nil then return default end return o[k]==1 or o[k]==true end
-local function update(w,o) local m=max(1,min(5,tonumber(o and o.Mode) or 1));if w.mode and w.mode~=m then w.bags={{},{},{},{},{}};w.card=nil;w.view=0;w.focus=1 end;w.mode=m;w.theme=max(1,min(6,tonumber(o and o.Theme) or 1));w.sound=on(o,"SFX",false);w.motion=on(o,"Motion",true);w.haptic=on(o,"Haptic",false) end
+local function update(w,o) local m=max(1,min(5,tonumber(o and o.Mode) or 1));if w.mode and w.mode~=m then w.bags={{},{},{},{},{},{}};w.card=nil;w.view=0;w.focus=1;w.dealAt=nil;w.message=nil;w.unbox=true end;w.mode=m;w.theme=max(1,min(6,tonumber(o and o.Theme) or 1));w.sound=on(o,"SFX",false);w.motion=on(o,"Motion",true);w.haptic=on(o,"Haptic",false) end
 local function signal(w,t)
   if w.sound and type(playTone)=="function" then pcall(playTone,t,65,0,0) end
   if w.haptic and type(playHaptic)=="function" then pcall(playHaptic,30,0,0) end
@@ -137,7 +137,7 @@ local paths={"/WIDGETS/SQLotto/trick-a.txt","/WIDGETS/SQLotto/trick-b.txt"}
 local legacy={"/WIDGETS/SQLotto/album-a.txt","/WIDGETS/SQLotto/album-b.txt"}
 local function checksum(s)
   local c=0
-  for i=1,#s do c=(c*31+s:byte(i))%65521 end
+  for i=1,#s do c=(c*31+string.byte(s,i))%65521 end
   return c
 end
 local function empty()
@@ -145,9 +145,9 @@ local function empty()
 end
 local function decode(s,slot)
   if type(s)~="string" then return end
-  local body,check=s:match("^(SQ[12][08]|[^\n]+)\n(%d+)\n$")
+  local body,check=string.match(s,"^(SQ[12][08]|[^\n]+)\n(%d+)\n$")
   if not body or checksum(body)~=tonumber(check) then return end
-  local seq,marks,a,b,c,d,e,f,draws=body:match("^SQ[12][08]|(%d+)|([0-5]+)|(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)|(%d+)$")
+  local seq,marks,a,b,c,d,e,f,draws=string.match(body,"^SQ[12][08]|(%d+)|([0-5]+)|(%d+),(%d+),(%d+),(%d+),(%d+),(%d+)|(%d+)$")
   if not seq or (#marks~=60 and #marks~=100) then return end
   if #marks==60 then marks=marks..string.rep("0",40) end
   local v={seq=tonumber(seq),marks=marks,wins={tonumber(a),tonumber(b),tonumber(c),tonumber(d),tonumber(e),tonumber(f)},draws=tonumber(draws),slot=slot}
@@ -197,16 +197,16 @@ local function record(w,win)
   else
     d.draws=min(999999999,d.draws+1)
     local i=cardIndex(w.level,w.card)
-    local old=tonumber(d.marks:sub(i,i)) or 0
-    if w.rarity>old then d.marks=d.marks:sub(1,i-1)..w.rarity..d.marks:sub(i+1) end
+    local old=tonumber(string.sub(d.marks,i,i)) or 0
+    if w.rarity>old then d.marks=string.sub(d.marks,1,i-1)..w.rarity..string.sub(d.marks,i+1) end
   end
   save(w)
 end
 local function summary(d)
   local total,found=0,0
   for _,x in ipairs(d.wins) do total=total+x end
-  for i=1,100 do if d.marks:sub(i,i)~="0" then found=found+1 end end
-  local originals=true;for i=1,60 do if d.marks:sub(i,i)=="0" then originals=false end end
+  for i=1,100 do if string.sub(d.marks,i,i)~="0" then found=found+1 end end
+  local originals=true;for i=1,60 do if string.sub(d.marks,i,i)=="0" then originals=false end end
   local awards={d.wins[5]>=1,d.wins[3]>=10,d.wins[6]>=10,total>=25,total>=50,total>=100,originals,total>=500,total>=1000}
   local a=0;for _,x in ipairs(awards) do if x then a=a+1 end end
   local xp=total*25
@@ -322,7 +322,7 @@ local function stats(w,W,H,by)
       local y=56+(l-1)*dy
       lcd.drawText(20,y,codes[l],SMLSIZE+white)
       for c=1,#decks[l] do
-        local r=tonumber(w.album.marks:sub(cardIndex(l,c),cardIndex(l,c))) or 0
+        local r=tonumber(string.sub(w.album.marks,cardIndex(l,c),cardIndex(l,c))) or 0
         lcd.drawFilledRectangle(55+(c-1)*dx,y+2,max(2,dx-3),max(5,dy-5),r==0 and ink or foil[r])
         if r>0 then lcd.drawRectangle(55+(c-1)*dx,y+2,max(2,dx-3),max(5,dy-5),edge[r]) end
       end
@@ -333,7 +333,7 @@ local function stats(w,W,H,by)
     for i=1,9 do
       local x=18+((i-1)%2)*cw;local y=55+floor((i-1)/2)*dy
       local label=(awards[i] and "+ " or "- ")..awardNames[i]
-      if lcd.sizeText(label,SMLSIZE)>cw-3 then label=label:sub(1,17) end
+      if lcd.sizeText(label,SMLSIZE)>cw-3 then label=string.sub(label,1,17) end
       lcd.drawText(x,y,label,SMLSIZE+(awards[i] and gold or muted))
     end
   end

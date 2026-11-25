@@ -1,4 +1,4 @@
-# The Trick Lottery v2.0 — Black Label
+# The Trick Lottery v2.1 — Black Label
 
 [Play / download / test](https://rcfamily772-commits.github.io/squadding-quads-overlays/trick-lottery/)
 
@@ -6,3 +6,9 @@
 
 ## Install
 Copy WIDGETS/SQLotto/main.lua to the existing SD card widget folder and restart. Colour screen 320×240+. Mode: 1 Real World, 2 Simulator, 3 TinyWhoop, 4 Freestyle, 5 Cinematic. Theme: 1 Black Label, 2 Bando, 3 Neon, 4 Retro, 5 Carbon, 6 Signature. Stats opens Passport, Vault and Achievements; Play opens daily, weekly and battle; Info opens Academy. Previous v1.8 ZIP remains available.
+
+## v2.1 — radio compatibility hotfix
+- Fix the refresh crash at main.lua:208 by calling the string library directly rather than indexing string values; also fix collection drawing, checksums, album decoding and achievement labels.
+- Reset all six deck bags when flying mode changes, and clear stale animation/message state.
+- Keep the existing SQLotto folder, original card IDs and SQ20 save format. Keep all album-*.txt and trick-*.txt files. Only replace main.lua; delete main.luac if present and restart.
+- Browser game remains v2.0; this is a radio-widget maintenance release. Physical-radio confirmation pending.
