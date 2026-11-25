@@ -1,4 +1,4 @@
--- Squadding Quads | The Trick Lottery | preview 2.3
+-- Squadding Quads | The Trick Lottery | preview 2.4
 local levels={"Beginner","Intermediate","Advanced","OnlyDrones","Bench Pilot","Adults Only"}
 local decks={
 {
@@ -236,7 +236,7 @@ local function draw(w)
   end
   w.card=table.remove(bag);w.last[w.level]=w.card
   local r=rng(w);w.rarity=r<.002 and 5 or r<.01 and 4 or r<.10 and 3 or r<.30 and 2 or 1
-  w.attempts=1;w.message=nil;w.focus=1
+  w.attempts=1;w.message=nil
   record(w,false)
   w.duration=w.unbox and 42 or 24;w.unbox=false
   w.dealAt=w.motion and getTime() or nil
@@ -273,6 +273,29 @@ local function choose(w,a)
   elseif a=="Landed" and w.card then record(w,true);if w.battle then w.scores[w.pilot]=w.scores[w.pilot]+1;w.pilot=3-w.pilot end;w.session=w.session+1;w.card=nil;w.message="Challenge completed.";w.focus=1;signal(w,1050)
   elseif a=="Draw" or a=="Deal" then draw(w) end
 end
+-- Preserve the action identity across changing button rows, not the index.
+local function perform(w,a)
+  if not a then return end
+  local previousView=w.view
+  if previousView==0 and (a=="Stats" or a=="Info" or a=="Play") then
+    w.returnAction=a
+  end
+  choose(w,a)
+  local target=a
+  if a=="Draw" or a=="Deal" then target=w.card and "Deal" or "Draw"
+  elseif a=="Landed" then target="Draw"
+  elseif a=="Back" then target=w.returnAction or "Draw";w.returnAction=nil
+  elseif previousView==0 and w.view>0 then
+    target="Back"
+  elseif a=="Daily" or a=="Weekly" or a=="Battle" then
+    target=w.card and "Deal" or "Play"
+  end
+  local row=actions(w)
+  for i,name in ipairs(row) do if name==target then w.focus=i;return end end
+  -- Never default to Landed when a card is active.
+  for i,name in ipairs(row) do if name=="Deal" or name=="Draw" or name=="Back" then w.focus=i;return end end
+  w.focus=1
+end
 local function textFit(x,y,s,flags,available)
   if lcd.sizeText(s,flags)>available then flags=SMLSIZE end
   lcd.drawText(x,y,s,flags+white)
@@ -295,35 +318,41 @@ local function tile(w)
   if W<1 or H<1 then return end
   lcd.drawFilledRectangle(0,0,W,H,ink)
   if W<40 or H<18 then return end
+  local total,found,a,rank=summary(w.album)
   lcd.drawFilledRectangle(0,0,3,H,gold)
-  local total,found=summary(w.album)
   if W<230 or H<145 then
     textFit(8,3,W>=130 and "SQ / TRICK LOTTERY" or "SQ TRICK",SMLSIZE,W-12)
-    if H>=40 then textFit(8,22,"Open full screen",SMLSIZE,W-14) end
-    if H>=66 then textFit(8,42,found.."/100 cards | "..total.." wins",SMLSIZE,W-14) end
-    if H>=90 then lcd.drawText(8,62,"Or SYS > TOOLS",SMLSIZE+gold) end
+    if H>=40 then textFit(8,22,"PRESS & HOLD",SMLSIZE,W-14) end
+    if H>=66 then textFit(8,42,"Choose Full screen",SMLSIZE,W-14) end
+    if H>=90 then textFit(8,62,found.."/100 | "..a.."/9 awards",SMLSIZE,W-14) end
     return
   end
-  lcd.drawText(10,5,"SQ / TRICK LOTTERY",SMLSIZE+gold)
-  lcd.drawText(W-10,5,"V2.3 / VIEW",RIGHT+SMLSIZE+gold)
-  local cw=W-28
-  local ch=H-76
-  local x,y=12,26
-  lcd.drawFilledRectangle(x+4,y+4,cw,ch,panel)
-  lcd.drawFilledRectangle(x,y,cw,ch,foil[1])
-  lcd.drawRectangle(x,y,cw,ch,gold)
-  lcd.drawFilledRectangle(x+5,y+5,cw-10,19,accents[w.level])
-  lcd.drawText(x+10,y+7,levels[w.level],SMLSIZE+white)
-  local label=w.card and (w.level==6 and "Adults Only card" or decks[w.level][w.card][1]) or "LOTTERY LAUNCHER"
-  local tf=MIDSIZE
-  if lcd.sizeText(label,tf)>cw-20 then tf=SMLSIZE end
-  if ch>=54 then lcd.drawText(x+10,y+28,label,tf+ink) end
-  if ch>=92 then
-    lcd.drawTextLines(x+10,y+57,cw-20,ch-59,"No input events in this view. Long-press the widget and choose Full screen, or run SQTrick from SYS > TOOLS.",SMLSIZE+ink)
+  local cx=floor(W/2)
+  lcd.drawRectangle(5,3,W-10,H-6,gold)
+  lcd.drawText(12,8,"SQ / BLACK LABEL",SMLSIZE+gold)
+  lcd.drawText(W-12,8,"V2.4",RIGHT+SMLSIZE+gold)
+  local top=27
+  local bottom=H-55
+  local ph=bottom-top
+  lcd.drawFilledRectangle(11,top,W-22,ph,panel)
+  lcd.drawRectangle(11,top,W-22,ph,gold)
+  if ph>=125 then
+    emblem(cx,top+23,15,gold)
+    lcd.drawText(cx,top+44,"THE TRICK LOTTERY",CENTER+MIDSIZE+white)
+    lcd.drawText(cx,top+72,"DRAW IT. FLY IT. OWN IT.",CENTER+SMLSIZE+muted)
+    lcd.drawFilledRectangle(20,bottom-40,W-40,30,gold)
+    lcd.drawText(cx,bottom-34,"PRESS & HOLD TO PLAY",CENTER+SMLSIZE+ink)
+  else
+    lcd.drawText(cx,top+6,"THE TRICK LOTTERY",CENTER+SMLSIZE+white)
+    lcd.drawText(cx,top+26,"PRESS & HOLD TO PLAY",CENTER+SMLSIZE+gold)
   end
-  local fy=H-43
-  lcd.drawText(10,fy,found.."/100 cards  |  "..total.." landed",SMLSIZE+white)
-  lcd.drawText(10,H-23,"PLAY: SYS > TOOLS > SQTrick",SMLSIZE+gold)
+  lcd.drawText(cx,bottom+3,"Choose Full screen",CENTER+SMLSIZE+gold)
+  local fy=H-32
+  local status=rank.." | "..found.."/100 | "..a.."/9 awards"
+  if lcd.sizeText(status,SMLSIZE)>W-24 then status=found.."/100 cards | "..a.."/9 awards" end
+  lcd.drawText(cx,fy,status,CENTER+SMLSIZE+white)
+  lcd.drawFilledRectangle(13,H-10,W-26,3,muted)
+  if found>0 then lcd.drawFilledRectangle(13,H-10,floor((W-26)*found/100),3,gold) end
 end
 local awardNames={"Shed Escapee","BoyWonder Approved","Absolutely Unhinged","Angry Karen Survivor","Touch Grass Pro","One More Pack","The Collector","No Spreadsheets","Forever Humble"}
 local function stats(w,W,H,by)
@@ -376,14 +405,14 @@ local function refresh(w,event,touch)
     w.dealAt=nil
     if event~=0 and (event==EVT_VIRTUAL_NEXT or event==EVT_ROT_RIGHT or event==EVT_VIRTUAL_INC) then w.focus=w.focus%#acts+1
     elseif event~=0 and (event==EVT_VIRTUAL_PREV or event==EVT_ROT_LEFT or event==EVT_VIRTUAL_DEC) then w.focus=(w.focus-2)%#acts+1
-    elseif event~=0 and (event==EVT_VIRTUAL_ENTER or event==EVT_ENTER_BREAK or event==EVT_ROT_BREAK) then choose(w,acts[w.focus])
+    elseif event~=0 and (event==EVT_VIRTUAL_ENTER or event==EVT_ENTER_BREAK or event==EVT_ROT_BREAK) then perform(w,acts[w.focus])
     elseif event~=0 and event==EVT_TOUCH_TAP and type(touch)=="table" and type(touch.x)=="number" and type(touch.y)=="number" and touch.y>=by and touch.y<by+bh then
-      local dx=touch.x-pad;if dx>=0 and dx<slot*#acts and dx%slot<slot-2 then w.focus=1+floor(dx/slot);choose(w,acts[w.focus]) end
+      local dx=touch.x-pad;if dx>=0 and dx<slot*#acts and dx%slot<slot-2 then w.focus=1+floor(dx/slot);perform(w,acts[w.focus]) end
     end
   end
   acts=actions(w);slot=floor((W-2*pad)/#acts)
   lcd.drawFilledRectangle(0,0,W,H,ink)
-  lcd.drawText(9,3,w.tool and "SQ / TRICK 2.3 / TOOL" or "SQ / TRICK 2.3 / LIVE",SMLSIZE+gold)
+  lcd.drawText(9,3,w.tool and "SQ / TRICK 2.4 / TOOL" or "SQ / TRICK 2.4 / LIVE",SMLSIZE+gold)
   lcd.drawText(W-9,3,w.battle and ("P"..w.pilot.." "..w.scores[1]..":"..w.scores[2]) or ("WINS "..w.session),RIGHT+SMLSIZE+white)
   if w.view>0 then stats(w,W,H,by) else
     local x,y,cw,ch=12,27,W-30,by-37
