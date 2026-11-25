@@ -2,7 +2,7 @@
 const byId = id => document.getElementById(id);
 const canvas = byId('lcd'), ctx = canvas.getContext('2d');
 let worker, deadline, timer, source, adapter, filename, generation=0, busy=false, pending=[];
-let lipoFiles={};
+let lipoFiles={},albumFiles={};
 let images=new Map(), epoch=Math.floor(Date.now()/1000), last='';
 const wallpaperRoot='../../wallpaper-shuffle/';
 const stock=['workshop.png','manc.png','karen.png','dealer.png'];
@@ -70,10 +70,11 @@ function run(){
   const [width,height]=byId('size').value.split('×').map(Number);
   const tile=byId('view').selectedIndex===1;
   canvas.width=tile?Math.floor(width/2):width;canvas.height=tile?Math.floor(height/2):height;
-  worker=new Worker('worker.js?v=lipo1');show('Starting '+filename+'…');
+  worker=new Worker('worker.js?v=trick2');show('Starting '+filename+'…');
   let first=true;
   worker.onerror=e=>fail(e.message||'Lua engine could not start.');
   worker.onmessage=({data})=>{
+    if(data.albumFiles){albumFiles=data.albumFiles;return;}
     if(data.lipoFiles){lipoFiles=data.lipoFiles;return;}
     if(typeof data.saved==='string'){last=data.saved;return;}
     clearTimeout(deadline);busy=false;
@@ -83,7 +84,7 @@ function run(){
     if(pending.length)send(pending.shift());
     else timer=setTimeout(()=>send({event:0}),120);
   };
-  send({source,adapter,width,height,tile,epoch,last,lipoFiles,images:[...images].map(([name,im])=>({name,width:im.naturalWidth,height:im.naturalHeight}))});
+  send({source,adapter,width,height,tile,epoch,last,lipoFiles,albumFiles,images:[...images].map(([name,im])=>({name,width:im.naturalWidth,height:im.naturalHeight}))});
 }
 function input(event,x,y){
   if(!worker||byId('view').selectedIndex)return;
@@ -105,14 +106,14 @@ async function load(file,wall=false,lipo=false){
   const ticket=++generation;stop();source=null;
   try{
     if(file && file.size>512*1024)throw Error('Choose a Lua file under 512 KB.');
-    const [code,shim]=await Promise.all([file?file.text():read(lipo?'../../lipo-butler/WIDGETS/SQLiPo/main.lua':wall?wallpaperRoot+'WIDGETS/SQWall/main.lua':'../main.lua'),adapter||read('runtime.lua?v=lipo1')]);
+    const [code,shim]=await Promise.all([file?file.text():read(lipo?'../../lipo-butler/WIDGETS/SQLiPo/main.lua':wall?wallpaperRoot+'WIDGETS/SQWall/main.lua':'../main.lua'),adapter||read('runtime.lua?v=trick2')]);
     if(wall && !images.size){
       const entries=await Promise.all(stock.map(async name=>[name,await decodeImage(wallpaperRoot+'IMAGES/SQWALL/'+name)]));
       if(ticket!==generation)return;
       images=new Map(entries);
     }
     if(ticket!==generation)return;
-    source=code;adapter=shim;filename=file?file.name:(lipo?'LiPo Butler':wall?'SQ Wallpaper Shuffle':'Pack Lottery');run();
+    source=code;adapter=shim;filename=file?file.name:(lipo?'LiPo Butler':wall?'SQ Wallpaper Shuffle':'Trick Lottery v2.0');run();
   }catch(err){if(ticket===generation)fail(String(err));}
 }
 byId('file').onchange=e=>{if(e.target.files[0])load(e.target.files[0]);};

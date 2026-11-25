@@ -5,7 +5,7 @@ const levels = Array.from(document.querySelectorAll('nav button'));
 const ranks=['B','I','A','OD','BP','18+'], suits=['♣','♦','♠','♥','♣','♠'];
 let busy=false;
 const controls=()=>[...levels,...['draw','landed','retry','redraw','reset','share-card','passport-open','album-open'].map(el)];
-function setBusy(value){busy=value;controls().forEach(b=>b.disabled=value);}
+function setBusy(value){busy=value;controls().forEach(b=>b.disabled=value);for(const id of ['flight-mode','daily','weekly','battle','theme','academy','inspect','vertical','horizontal','reveal-export','result-export']){const b=el(id);if(b)b.disabled=value;}}
 const face=()=>el('challenge-card');
 const black=SQBlack;
 const collector=SQCollector, rarityNames=['Standard','Rare','Legendary','Mythical','Golden Ticket'];
@@ -98,7 +98,7 @@ function save() {
 }
 function drawCard() {
   let bag=state.bags[state.level]=state.bags[state.level].filter(i=>sqEligible(state.level,i,el('flight-mode').value));
-  if(!decks[state.level].some((_,i)=>sqEligible(state.level,i,el('flight-mode').value))){state.level=0;return drawCard();}
+  if(!decks[state.level].some((_,i)=>sqEligible(state.level,i,el('flight-mode').value))){state.level=decks.findIndex((d,l)=>l<3&&d.some((_,i)=>sqEligible(l,i,el('flight-mode').value)));return drawCard();}
   if (!bag.length) {
     decks[state.level].forEach((_,i) => {if(sqEligible(state.level,i,el('flight-mode').value))bag.push(i);});
     for (let i=bag.length-1;i>0;i--) {

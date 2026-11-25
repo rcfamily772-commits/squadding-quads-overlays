@@ -13,8 +13,11 @@ self.onmessage = ({data}) => {
     if (data.source !== undefined) {
       const init = fengari.load(data.adapter,'@adapter.lua')();
       const images=data.images || [];
-      let state=data.last;const lipo=data.lipoFiles||{};
+      let state=data.last;const lipo=data.lipoFiles||{},album=data.albumFiles||{};
       function assets(op,path,index) {
+        if(op==='calendar')return new Date((data.epoch+Math.floor((performance.now()-start)/1000))*1000).toISOString().slice(0,10);
+        if(op==='albumState')return album[path];
+        if(op==='albumSave'){album[path]=String(index).slice(0,350);self.postMessage({albumFiles:album});return;}
         if(op==='lipoState')return lipo[path];
         if(op==='lipoSave'){lipo[path]=String(index).slice(0,2048);self.postMessage({lipoFiles:lipo});return;}
         if(op==='clock')return data.epoch+Math.floor((performance.now()-start)/1000);
