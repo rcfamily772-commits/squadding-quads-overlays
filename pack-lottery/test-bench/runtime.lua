@@ -43,7 +43,7 @@ return function(_, source, width, height, tile, emit, ticks, assets)
   env.getSourceValue=function(name) if name=='VFAS' then return 23.4,true,true end return nil,false,false end
   if assets then
     env.getRtcTime=function() return assets(nil,'clock') end
-    env.getDateTime=function() local date=assets(nil,'calendar');local y,m,d=date:match('^(%d+)-(%d+)-(%d+)
+    env.getDateTime=function() local date=assets(nil,'calendar');local y,m,d=date:match('^(%d+)-(%d+)-(%d+)$');return {year=tonumber(y),mon=tonumber(m),day=tonumber(d)} end
     env.dir=function(path)
       local i=0
       return function() i=i+1; return assets(nil,'name',path,i) end
@@ -70,48 +70,6 @@ return function(_, source, width, height, tile, emit, ticks, assets)
     function env.io.read(f,n) return string.sub(f.body,1,n) end
     function env.io.write(f,s) f.body=string.sub(f.body..s,1,f.lipo and 2048 or 350) end
     function env.io.close(f) if f.mode=='w' then if f.lipo then assets(nil,'lipoSave',f.path,f.body) elseif f.album then assets(nil,'albumSave',f.path,f.body) else assets(nil,'save',f.body) end end end
-  end
-  local chunk=assert(load(source,'@main.lua','t',env))
-  local api=chunk()
-  assert(type(api)=='table' and type(api.create)=='function' and type(api.refresh)=='function','Expected a widget returning create and refresh functions')
-  local zone={x=0,y=0,w=width,h=height}
-  if tile then zone.w=math.floor(width/2) zone.h=math.floor(height/2) end
-  local options={}
-  for _,o in ipairs(api.options or {}) do options[o[1]]=o[3] end
-  local widget=api.create(zone,options)
-  return function(_,event,x,y)
-    if tile then api.refresh(widget,nil,nil)
-    elseif event==4 then api.refresh(widget,event,{x=x,y=y,startX=x,startY=y,tapCount=1})
-    else api.refresh(widget,event or 0,nil) end
-  end
-end
-);return {year=tonumber(y),mon=tonumber(m),day=tonumber(d)} end
-    env.dir=function(path)
-      local i=0
-      return function() i=i+1; return assets(nil,'name',path,i) end
-    end
-    env.Bitmap={}
-    function env.Bitmap.open(path)
-      if assets(nil,'width',path) then return path end
-    end
-    function env.Bitmap.getSize(path)
-      return assets(nil,'width',path),assets(nil,'height',path)
-    end
-    function lcd.drawBitmap(path,x,y,scale)
-      send('drawBitmap',x,y,path,scale or 100)
-    end
-    env.io={}
-    function env.io.open(path,mode)
-      local album=path=='/WIDGETS/SQLotto/album-a.txt' or path=='/WIDGETS/SQLotto/album-b.txt'
-      local lipo=path=='/WIDGETS/SQLiPo/packs-a.txt' or path=='/WIDGETS/SQLiPo/packs-b.txt'
-      if not album and not lipo and path~='/WIDGETS/SQWall/last.txt' then return end
-      local body
-      if lipo then body=assets(nil,'lipoState',path) elseif album then body=albumFiles[path] else body=assets(nil,'state') end
-      if mode=='w' or (mode=='r' and body) then return {mode=mode,body=mode=='w' and '' or body,path=path,album=album,lipo=lipo} end
-    end
-    function env.io.read(f,n) return string.sub(f.body,1,n) end
-    function env.io.write(f,s) f.body=string.sub(f.body..s,1,f.lipo and 2048 or 300) end
-    function env.io.close(f) if f.mode=='w' then if f.lipo then assets(nil,'lipoSave',f.path,f.body) elseif f.album then albumFiles[f.path]=f.body else assets(nil,'save',f.body) end end end
   end
   local chunk=assert(load(source,'@main.lua','t',env))
   local api=chunk()
