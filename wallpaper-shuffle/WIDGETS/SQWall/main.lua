@@ -1,8 +1,9 @@
--- SQ Wallpaper Shuffle v1.4 | Unified Gallery
+-- SQ Wallpaper Shuffle v1.5 | Complete Gallery
 local folder,art,statePath="/IMAGES/SQWALL/","/WIDGETS/SQWall/art/","/WIDGETS/SQWall/last.txt"
 local floor,ceil,min,max=math.floor,math.ceil,math.min,math.max
 local current,boot,introShown
 local gold,ink,white=lcd.RGB(225,190,123),lcd.RGB(15,16,17),lcd.RGB(246,242,228)
+local bundled={}
 local starters={"karen","dealer","manc","workshop","sq004","sq005","sq006","sq007","sq008","sq009","sq010","sq011","sq012","sq013","sq014","sq015","sq016","sq017","sq018","sq019","sq020","sq021","sq022","sq023","sq024","sq025","sq026","sq027","sq028","sq029","sq030","intro"}
 local options={{"Intro",BOOL,1},{"Motion",BOOL,1},{"SFX",BOOL,0}}
 local function on(o,k,d) if not o or o[k]==nil then return d end return o[k]==1 or o[k]==true end
@@ -19,6 +20,7 @@ local function remember(name)
 end
 local function catalogue()
  local names,seen={},{}
+ bundled={}
  local function add(name)
   if type(name)=="string" and #name<=100 and name:lower():match("%.png$") and not name:match("[/\r\n]") and not seen[name:lower()] then names[#names+1]=name;seen[name:lower()]=true end
  end
@@ -33,6 +35,17 @@ local function catalogue()
    if f then io.close(f);add(name) end
   end)
  end
+ -- Built-in gallery manifest maps logical PNG names to local artwork files.
+ pcall(function()
+  local f=io.open(art.."gallery.txt","r");if not f then return end
+  local contents=io.read(f,8192) or "";io.close(f)
+  for line in contents:gmatch("[^\r\n]+") do
+   local logical,actual=line:match("^([%w_-]+%.png)=([%w_-]+%.[%a]+)$")
+   if logical and actual then
+    bundled[logical:lower()]=actual;add(logical)
+   end
+  end
+ end)
  -- Manifest for radios where directory enumeration is unavailable.
  pcall(function()
   local f=io.open(folder.."gallery.txt","r");if not f then return end
@@ -73,6 +86,10 @@ local function advance(w)
  -- Free the former bitmap before opening another to minimise peak RAM.
  w.bitmap=nil
  local ok,bmp,bw,bh=pcall(openImage,folder..name)
+ if not ok or not bmp then
+  local file=bundled[name:lower()]
+  if file then ok,bmp,bw,bh=pcall(openImage,art..file) end
+ end
  if not ok or not bmp then
   for _,base in ipairs(starters) do if name:lower()==base..".png" then
    local legacy=base=="karen" or base=="workshop" or base=="dealer" or base=="manc"
