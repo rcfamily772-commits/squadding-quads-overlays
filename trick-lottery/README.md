@@ -65,3 +65,6 @@ Replace WIDGETS/SQLotto/main.lua, retain all collection TXT files and restart. P
 
 ## ETHOS v1.0 preview (fixed wing)
 Separate native widget, 25 fixed-wing cards. [ETHOS release and install](ethos/index.html) | [ETHOS ZIP](SQ_Trick_Lottery_ETHOS_v1.0.zip). EdgeTX v2.5 remains unchanged. Hardware validation pending.
+
+## ETHOS v1.1 preview
+[Fixed-wing web companion](ethos/app/index.html) | [ETHOS v1.1 ZIP](SQ_Trick_Lottery_ETHOS_v1.1.zip). Same 25 cards. Separate local browser records and backup; no radio sync. EdgeTX v2.5 unchanged.

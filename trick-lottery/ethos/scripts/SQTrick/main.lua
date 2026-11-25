@@ -1,4 +1,4 @@
--- Squadding Quads | Trick Lottery ETHOS 1.0 preview
+-- Squadding Quads | Trick Lottery ETHOS 1.1 preview
 -- Read-only training companion. No flight-control or telemetry writes.
 local cards={
 {"Deck of Wings","Fly one smooth rectangular circuit at steady height and speed.","Fixed Wing","Basic circuit","square"},
@@ -111,7 +111,7 @@ local function paint(w)
   local footerY=by-24
   local cardY=52
   local cardH=footerY-cardY-5
-  text(p,5,"SQUADDING QUADS  /  ETHOS 1.0",small,232,199,128)
+  text(p,5,"SQUADDING QUADS  /  ETHOS 1.1",small,232,199,128)
   text(p,23,w.sim and "FIXED WING  |  SIMULATOR" or "FIXED WING  |  FIELD",normal,245,245,241)
   rect(p,cardY,W-2*p,cardH,30,39,45)
   rect(p,cardY,4,cardH,232,199,128)
