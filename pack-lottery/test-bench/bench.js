@@ -113,7 +113,7 @@ async function load(file,wall=false,lipo=false){
       images=new Map(entries);
     }
     if(ticket!==generation)return;
-    source=code;adapter=shim;filename=file?file.name:(lipo?'LiPo Butler':wall?'SQ Wallpaper Shuffle':'Trick Lottery v2.0');run();
+    source=code;adapter=shim;filename=file?file.name:(lipo?'LiPo Butler':wall?'SQ Wallpaper Shuffle':'Trick Lottery v2.5');run();
   }catch(err){if(ticket===generation)fail(String(err));}
 }
 byId('file').onchange=e=>{if(e.target.files[0])load(e.target.files[0]);};
