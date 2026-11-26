@@ -65,7 +65,7 @@ def plan(root, profile, review):
             if not isinstance(before,str) or "\n" in before or "\r" in before or not isinstance(old,str) or not LITERAL.fullmatch(old):
                 die("Only exact single-line 24-bit hexadecimal replacements are accepted")
             # Restrict to a labelled palette assignment, not arbitrary executable code.
-            pattern = r"\s*(?:COLOR_THEME_)?"+re.escape(k)+r"(?:_INDEX)?\s*[:=]\s*"+re.escape(old)+r"\s*[,;]?\s*(?://[^\r\n]*)?"
+            pattern = r"\s*(?:COLOR_THEME_)?"+re.escape(k)+r"\s*[:=]\s*"+re.escape(old)+r"\s*[,;]?\s*(?://[^\r\n]*)?"
             if not re.fullmatch(pattern,before) or data.splitlines().count(before) != 1:
                 die("No unique, simple labelled palette assignment for " + k)
             if int(old,16) == int(palette[k][1:],16):
