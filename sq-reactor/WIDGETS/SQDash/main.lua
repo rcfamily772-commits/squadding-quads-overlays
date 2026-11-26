@@ -1,4 +1,4 @@
--- SQ Pilot Dash v1.1 | Black Label | read-only, colour EdgeTX 2.8+
+-- SQ Pilot Dash v1.3 | Black Label | read-only, colour EdgeTX 2.8+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
 local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,1,1,5},{"MPH",BOOL,0}}
@@ -32,6 +32,20 @@ local function read(id)
  if ok and type(v)=="number" and v==v and current and fresh then return v end
  return nil
 end
+-- Bounded history: one speed sample per second, at most 36, no SD writes.
+local function history(w,now,v)
+ if w.histAt and now-w.histAt<100 and now>=w.histAt then return end
+ w.histAt=now
+ w.hist[#w.hist+1]=v or false
+ if #w.hist>36 then table.remove(w.hist,1) end
+end
+local function finish(w)
+ w.flights=w.flights+1
+ local s=w.stats;w.newBest=false
+ if s.speed and (not w.bestSpeed or s.speed>w.bestSpeed) then w.bestSpeed=s.speed;w.newBest=true end
+ if not w.bestTime or w.elapsed>w.bestTime then w.bestTime=w.elapsed end
+ if s.amp and (not w.bestAmp or s.amp>w.bestAmp) then w.bestAmp=s.amp end
+end
 local function sample(w)
  local now=getTime()
  if w.last and now>=w.last and now-w.last<10 then return end
@@ -47,9 +61,10 @@ local function sample(w)
   local field=w.ids[key];local v=field and read(field.id) or nil
   if v then v=v*field.scale;if v>=s[3] and v<=s[4] then d[key]=v end end
  end
+ if d.volt and d.amp then d.watts=d.volt*d.amp end
  w.data=d
  if armed==nil then
-  if w.state=="FLIGHT" then w.gap=true end
+  if w.state=="FLIGHT" then w.gap=true;history(w,now,nil) end
   w.armUnknown=true
   return
  end
@@ -59,14 +74,17 @@ local function sample(w)
   return
  end
  if armed and w.state~="FLIGHT" then
-  w.state="FLIGHT";w.start=now;w.stats={};w.elapsed=0;w.gap=false;w.startMah=d.mah;w.mahReset=false;w.prevMah=nil;w.mahPartial=d.mah==nil
+  w.state="FLIGHT";w.start=now;w.stats={};w.elapsed=0;w.gap=false;w.startMah=d.mah;w.mahReset=false;w.prevMah=nil;w.mahPartial=d.mah==nil;w.hist={};w.histAt=nil;w.speedSum=0;w.speedN=0;w.startVolt=d.volt;w.newBest=false
  elseif not armed and w.state=="FLIGHT" then
-  w.elapsed=max(0,(now-w.start)/100);w.state="REPORT";return
+  w.elapsed=max(0,(now-w.start)/100);w.state="REPORT";finish(w);return
  end
  if w.state~="FLIGHT" then return end
  w.elapsed=max(0,(now-w.start)/100)
  local s=w.stats
- for _,k in ipairs({"speed","amp","alt"}) do if d[k]~=nil then s[k]=s[k] and max(s[k],d[k]) or d[k] end end
+ history(w,now,d.speed)
+ if d.speed then w.speedSum=w.speedSum+d.speed;w.speedN=w.speedN+1;s.avg=w.speedSum/w.speedN end
+ if d.volt and not w.startVolt then w.startVolt=d.volt end
+ for _,k in ipairs({"speed","amp","alt","watts"}) do if d[k]~=nil then s[k]=s[k] and max(s[k],d[k]) or d[k] end end
  for _,k in ipairs({"volt","lq","rssi"}) do if d[k]~=nil then s[k]=s[k] and min(s[k],d[k]) or d[k] end end
  if d.mah then
   if not w.startMah then w.startMah=d.mah;w.mahPartial=true end
@@ -79,7 +97,7 @@ local function update(w,o)
  o=o or {};w.armSrc=clamp(o.ArmSrc,0,65535,0);w.high=o.ArmHigh==nil or o.ArmHigh==1 or o.ArmHigh==true
  w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,5,1);w.mph=o.MPH==1 or o.MPH==true
  local p=palettes[w.theme];w.accent=rgb(p[1],p[2],p[3]);w.dim=rgb(floor(p[1]*.22),floor(p[2]*.22),floor(p[3]*.22))
- w.state="SETUP";w.seenSafe=false;w.armUnknown=true;w.stats={};w.data={};w.elapsed=0;w.last=nil;w.resolved=nil;w.prevMah=nil;w.mahPartial=false
+ w.state="SETUP";w.seenSafe=false;w.armUnknown=true;w.stats={};w.data={};w.elapsed=0;w.last=nil;w.resolved=nil;w.prevMah=nil;w.mahPartial=false;w.hist={};w.histAt=nil;w.flights=0;w.bestSpeed=nil;w.bestTime=nil;w.bestAmp=nil;w.newBest=false
 end
 local function create(zone,o) local w={zone=zone};update(w,o);return w end
 local function fmt(v,f) return v~=nil and string.format(f,v) or "--" end
@@ -88,7 +106,7 @@ local function rect(x,y,W,H,col) if W>0 and H>0 then lcd.drawFilledRectangle(x,y
 local function txt(x,y,t,f,c) lcd.drawText(x,y,t,f+c) end
 local function line(x,y,X,Y,c) lcd.drawLine(x,y,X,Y,SOLID,c) end
 local function card(x,y,W,H,label,value,sub,c)
- rect(x,y,W,H,panel);rect(x,y,2,H,c);lcd.drawRectangle(x,y,W,H,border)
+ rect(x,y,W,H,panel);rect(x+1,y+1,W-2,2,c);lcd.drawRectangle(x,y,W,H,border)
  txt(x+6,y+3,label,SMLSIZE,muted)
  local f=H>=47 and MIDSIZE or SMLSIZE
  if lcd.sizeText and lcd.sizeText(value,f)>W-12 then f=SMLSIZE end
@@ -110,7 +128,7 @@ local function refresh(w,event)
  local battery=fmt(d.volt,"%.1f V")
  local cell=voltage and fmt(voltage,"%.2f V/c") or "PACK"
  local duration=time(w.elapsed)
- txt(6,3,"SQ / PILOT DASH",SMLSIZE,accent)
+ txt(6,3,"SQ / PILOT DASH  1.3",SMLSIZE,accent)
  if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
  line(6,17,W-7,17,border)
  if W<300 or H<175 then
@@ -122,21 +140,23 @@ local function refresh(w,event)
   return
  end
  local margin=8;local gap=5;local side=floor(W*.25);local hero=W-2*side-2*gap-2*margin
- local y=23;local top= floor((H-49)*.57);local bot=H-y-top-gap-19
+ local rich=W>=400 and H>=230
+ local y=23;local strip=rich and 43 or 0;local top=floor((H-49-strip)*.61);local bot=H-y-top-gap-19-strip
  local hx=margin+side+gap;local rx=hx+hero+gap
  local ch=floor((top-gap)/2)
  card(margin,y,side,ch,rep and "MIN PACK" or "PACK VOLTAGE",battery,cell,accent)
  card(margin,y+ch+gap,side,top-ch-gap,rep and "PEAK CURRENT" or "CURRENT",fmt(d.amp,"%.1f A"),nil,accent)
  card(rx,y,side,ch,rep and "MIN LINK" or "LINK QUALITY",fmt(d.lq,"%.0f%%"),nil,accent)
- card(rx,y+ch+gap,side,top-ch-gap,rep and "WEAKEST RSSI" or "RSSI dBm",fmt(d.rssi,"%.0f dBm"),nil,accent)
+ card(rx,y+ch+gap,side,top-ch-gap,rep and "MIN RSSI" or "RSSI dBm",fmt(d.rssi,"%.0f dBm"),nil,accent)
  rect(hx,y,hero,top,panel);lcd.drawRectangle(hx,y,hero,top,border)
  local cx=hx+floor(hero/2);local cy=y+floor(top*.58)
  local radius=floor(min(hero*.43,top*.43))
+ if radius>=15 then lcd.drawCircle(cx,cy,radius+2,border) end
  local ratio=sv and min(1,max(0,d.speed/180)) or 0
- for i=0,23 do
-  local a=(135+i*270/23)*math.pi/180
-  local r1=radius-(i%3==0 and 7 or 4)
-  line(cx+floor(r1*math.cos(a)),cy+floor(r1*math.sin(a)),cx+floor(radius*math.cos(a)),cy+floor(radius*math.sin(a)),sv and i/23<=ratio and accent or w.dim)
+ for i=0,31 do
+  local a=(135+i*270/31)*math.pi/180
+  local r1=radius-(i%4==0 and 8 or 4)
+  line(cx+floor(r1*math.cos(a)),cy+floor(r1*math.sin(a)),cx+floor(radius*math.cos(a)),cy+floor(radius*math.sin(a)),sv and i/31<=ratio and accent or w.dim)
  end
  txt(cx,y+5,rep and "PEAK SPEED" or "GPS SPEED",CENTER+SMLSIZE,muted)
  local val=fmt(sv,"%.0f")
@@ -150,9 +170,31 @@ local function refresh(w,event)
  local m=rep and d.mah or nil;if w.state=="FLIGHT" and d.mah~=nil then m=w.stats.mah end
  card(margin+2*(bw+gap),by,bw,bot,"USED mAh",fmt(m,"%.0f"),nil,accent)
  card(margin+3*(bw+gap),by,bw,bot,"PACK / CELL",voltage and fmt(voltage,"%.2f V") or "--",nil,accent)
- local foot=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / ARM OR SAMPLE GAP" or (w.mahReset and "mAh COUNTER RESET" or (w.mahPartial and "mAh PARTIAL" or "BLACK LABEL / V1.1")))
+ if rich then
+  local sy=by+bot+4;local sw=floor(W*.49);local bx=margin+sw+gap;local rw=W-bx-margin
+  rect(margin,sy,sw,strip-6,panel);lcd.drawRectangle(margin,sy,sw,strip-6,border)
+  txt(margin+5,sy+2,"SPEED TRACE / LAST 36s",SMLSIZE,muted)
+  local peak=1;for i=1,#w.hist do if w.hist[i] then peak=max(peak,w.hist[i]) end end
+  local gx=margin+6;local gy=sy+16;local gw=sw-12;local gh=strip-24
+  line(gx,gy+gh,gx+gw,gy+gh,border)
+  for i=2,#w.hist do
+   local a,b=w.hist[i-1],w.hist[i]
+   if a and b then line(gx+floor((i-2)*gw/35),gy+gh-floor(a/peak*gh),gx+floor((i-1)*gw/35),gy+gh-floor(b/peak*gh),accent) end
+  end
+  rect(bx,sy,rw,strip-6,panel);lcd.drawRectangle(bx,sy,rw,strip-6,border)
+  local factor=w.mph and .621371 or 1
+  if rep then
+   txt(bx+5,sy+2,w.newBest and "NEW SESSION SPEED BEST" or "SESSION BEST / PACK "..w.flights,SMLSIZE,accent)
+   local av=d.avg and d.avg*factor or nil
+   txt(bx+5,sy+16,"BEST "..fmt(w.bestSpeed and w.bestSpeed*factor,"%.0f").."  AVG "..fmt(av,"%.0f").." "..unit,SMLSIZE,white)
+  else
+   txt(bx+5,sy+2,"POWER / SESSION BEST",SMLSIZE,muted)
+   txt(bx+5,sy+16,fmt(d.watts,"%.0f W").."  |  "..fmt(w.bestSpeed and w.bestSpeed*factor,"%.0f").." "..unit,SMLSIZE,white)
+  end
+ end
+ local foot=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / ARM OR SAMPLE GAP" or (w.mahReset and "mAh COUNTER RESET" or (w.mahPartial and "mAh PARTIAL" or "BLACK LABEL / V1.3")))
  txt(8,H-14,foot,SMLSIZE,w.gap and red or muted)
- if W>=440 or not w.gap then txt(W-8,H-14,rep and "RE-ARM TO RESET" or "READ ONLY",RIGHT+SMLSIZE,muted) end
+ if not w.gap and not w.armUnknown then txt(W-8,H-14,rep and "RE-ARM TO RESET" or "READ ONLY",RIGHT+SMLSIZE,muted) end
 end
 -- Reset consumption bookkeeping on each observed arm edge.
 local function poll(w)
