@@ -48,3 +48,14 @@ body{background:radial-gradient(ellipse at 50% 0%,#292a27,#0e1011 65%);color:#f5
 .sq-flight-reverse h3{font-size:clamp(18px,4.5vw,31px);line-height:1.05;letter-spacing:-.035em;margin:1px 0;color:#f4eee3}
 .sq-flight-reverse svg{width:100%;min-height:0;max-height:205px;flex:1 1 auto;display:block;margin:auto}
 .sq-flight-note{font-size:clamp(10px,2.3vw,14px);line-height:1.3;color:#e0e7e7}
+
+/* Uncensored / custom vector emblems, not emoji. */
+.sq-adult-reverse{background:radial-gradient(ellipse at 50% 35%,#3a2b19aa,transparent 65%),repeating-linear-gradient(45deg,#181817 0 4px,#111211 4px 8px);box-shadow:inset 0 0 0 1px #b99250,inset 0 0 0 5px #141414,inset 0 0 0 6px #594325;color:#efd79a;overflow:hidden;gap:5px}
+.sq-adult-kicker{font:700 clamp(8px,1.7vw,11px)/1.4 monospace;letter-spacing:.11em;color:#d3b16c}
+.sq-adult-badge{font:800 clamp(9px,2vw,13px)/1.3 system-ui;letter-spacing:.1em;color:#f1dba7}
+.sq-adult-reverse svg{max-height:190px;min-height:0;flex:1 1 auto}
+.sq-adult-reverse .sq-adult-copy{font:950 clamp(19px,5vw,37px)/1.04 system-ui,sans-serif;letter-spacing:-.045em;color:#f9e6b5;max-width:100%;overflow-wrap:break-word;margin:0 0 5px;text-shadow:0 2px 3px #000}
+.sq-golden-finger{box-shadow:inset 0 0 0 2px #f8d777,inset 0 0 24px #c58b3544;background:radial-gradient(ellipse at 50% 40%,#7b4e2355,transparent 65%),repeating-linear-gradient(45deg,#191815 0 4px,#10100e 4px 8px)}
+.sq-golden-finger::after{content:"";position:absolute;inset:-40%;pointer-events:none;background:linear-gradient(115deg,transparent 38%,#fff1b533 48%,#fff6cc66 50%,transparent 62%);animation:sqFingerShine 3s ease-in-out infinite}
+@keyframes sqFingerShine{0%,35%{transform:translateX(-90%)}75%,100%{transform:translateX(90%)}}
+@media(prefers-reduced-motion:reduce){.sq-golden-finger::after{animation:none;display:none}}

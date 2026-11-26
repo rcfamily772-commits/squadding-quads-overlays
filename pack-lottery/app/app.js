@@ -109,6 +109,7 @@ function drawCard() {
     if (bag[end] === state.last[state.level]) [bag[0],bag[end]] = [bag[end],bag[0]];
   }
   state.card = bag.pop();
+  state.adultGolden=state.level===5&&Math.random()<0.005;
   state.rarity=collector.roll();
   state.collected=true;
   collector.draw(state.level,state.card,state.rarity);

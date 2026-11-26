@@ -85,16 +85,18 @@ const sqSequences={
 const sqReverseCard=v2el('challenge-card'),sqReverse=document.createElement('div');
 sqReverse.className='sq-flight-reverse';sqReverse.hidden=true;sqReverseCard.append(sqReverse);
 const sqInspect=v2el('inspect'),sqOldInspect=sqInspect.onclick;
-function sqCanFlip(){return state.card!==null&&state.level>=0&&state.level<3;}
+function sqCanFlip(){return state.card!==null&&((state.level>=0&&state.level<3)||state.level===5);}
 function sqSide(back){
  sqReverseCard.classList.toggle('sq-diagram-open',back);sqReverse.hidden=!back;
  for(const item of sqReverseCard.children){if(item===sqReverse||item.classList.contains('bottom'))continue;if(back)item.setAttribute('aria-hidden','true');else item.removeAttribute('aria-hidden');}
- sqInspect.textContent=sqCanFlip()?(back?'Flip to front ↶':'Flip card / diagram ↻'):'Inspect card';
+ sqInspect.textContent=sqCanFlip()?(back?'Flip to front ↶':state.level===5?'Flip card / 18+ ↻':'Flip card / diagram ↻'):'Inspect card';
  sqInspect.setAttribute('aria-expanded',String(back));
 }
 function sqFlipRefresh(){sqSide(false);}
 function sqSVG(tag,attrs={},content){const x=document.createElementNS('http://www.w3.org/2000/svg',tag);for(const [k,v] of Object.entries(attrs))x.setAttribute(k,v);if(content)x.textContent=content;return x;}
 function sqRenderReverse(){
+ sqReverse.classList.remove('sq-adult-reverse','sq-golden-finger');
+ if(state.level===5){sqRenderAdultReverse();return;}
  const [title,brief,mode,pre]=decks[state.level][state.card], key=sqFlightMap[state.level][state.card], [view,d,note]=sqFlightShapes[key];
  const head=node('div','SQ / FLIGHT SCHOOL  ·  '+titleCase(state.rarity).toUpperCase());head.className='sq-flight-meta';
  const name=node('h3',title);const label=node('div',view+' / NOT TO SCALE');label.className='sq-flight-label';
@@ -136,6 +138,69 @@ function sqRenderReverse(){
  const safety=node('div',(mode==='Simulator'?'SIMULATOR ONLY':'PRACTISE IN SIM FIRST')+' · '+black.serial(state.level,state.card));safety.className='sq-flight-meta';
  sqReverse.replaceChildren(head,name,label,svg,foot,safety);
 }
+
+/* Black Label: Uncensored. Adult art is constructed only for deck 5. */
+const sqAdultCards=[
+ ['finger','JUST FUCKING FLY IT.'],
+ ['skull','LESS SHIT TALK. MORE STICK TIME.'],
+ ['battery',"I DIDN'T CHARGE MYSELF."],
+ ['trophy','WORLD CHAMPION OF FUCK ALL.'],
+ ['sofa','PROFESSIONAL BENCH WARMER.'],
+ ['warning','CRITICAL ERROR: PILOT NOT FLYING.'],
+ ['skeleton','STILL WAITING FOR YOU TO FLY.'],
+ ['crown','KING OF THE FUCKING EXCUSES.'],
+ ['sheet',"WE DON'T FLY FUCKING SPREADSHEETS."],
+ ['radio','ALL THE GEAR. NO FUCKING IDEA.'],
+ ['drone','STOP ADMIRING IT. FUCKING FLY IT.'],
+ ['finger','FUCK PERFECTION. GO FLY.']
+];
+function sqAdultArt(kind,golden){
+ const svg=sqSVG('svg',{viewBox:'0 0 300 190',role:'img','aria-label':golden?'Metallic golden middle finger':kind+' illustrated emblem'});
+ const defs=sqSVG('defs'),gradient=sqSVG('linearGradient',{id:'sq-adult-metal',x1:0,y1:0,x2:1,y2:1});
+ for(const [offset,color] of [['0%','#77501c'],['22%','#dba64d'],['44%','#fff0af'],['58%','#a8742b'],['80%','#e4b75e'],['100%','#80531e']])gradient.append(sqSVG('stop',{offset,'stop-color':color}));
+ defs.append(gradient);svg.append(defs);
+ const ink='url(#sq-adult-metal)',outline='#f4d48d',dark='#191715';
+ svg.append(sqSVG('circle',{cx:150,cy:95,r:82,fill:'none',stroke:'#806438','stroke-width':.8}),sqSVG('circle',{cx:150,cy:95,r:73,fill:'none',stroke:'#806438','stroke-dasharray':'2 5'}));
+ const g=sqSVG('g',{'stroke-linecap':'round','stroke-linejoin':'round',stroke:outline,'stroke-width':2.1});
+ const p=(d,fill=ink,extra={})=>g.append(sqSVG('path',{d,fill,...extra}));
+ const rect=(x,y,width,height,rx=5,fill=ink)=>g.append(sqSVG('rect',{x,y,width,height,rx,fill}));
+ const circ=(cx,cy,r,fill=ink)=>g.append(sqSVG('circle',{cx,cy,r,fill}));
+ function finger(scale=1,dy=0){
+  const h=sqSVG('g',{transform:'translate(150 '+(95+dy)+') scale('+scale+') translate(-150 -95)'});
+  h.append(sqSVG('path',{d:'M122 164 L122 145 Q108 139 101 123 L91 100 Q86 86 99 83 Q108 81 116 94 L120 100 V83 Q120 73 130 73 Q140 73 141 85 V30 Q141 18 151 18 Q162 18 162 30 V78 Q163 68 173 69 Q184 70 184 81 V91 Q185 82 195 84 Q206 86 206 99 V119 Q206 139 184 148 V164 Z',fill:ink,stroke:outline,'stroke-width':2.3,'stroke-linejoin':'round'}),sqSVG('path',{d:'M141 84 V108 M162 78 V102 M184 91 V110 M120 100 Q128 120 148 119 M126 146 H182 M145 32 Q151 27 157 32',fill:'none',stroke:'#815924','stroke-width':2.3,'stroke-linecap':'round'}),sqSVG('rect',{x:121,y:157,width:64,height:13,rx:3,fill:dark,stroke:outline}));g.append(h);
+ }
+ function skull(){
+  p('M105 110 C83 77 99 38 150 37 C201 38 217 77 195 110 L181 123 V143 H119 V123 Z');
+  rect(99,67,102,39,10,dark);rect(105,73,40,25,6,'#684b25');rect(155,73,40,25,6,'#684b25');p('M150 106 L142 121 H158 Z',dark);p('M133 129 V142 M146 129 V142 M159 129 V142 M172 129 V142','none',{stroke:'#62431f'});
+ }
+ function radio(y=0){
+  rect(89,77+y,122,65,13);p('M113 '+(77+y)+' L104 '+(54+y)+' M187 '+(77+y)+' L196 '+(54+y),'none',{'stroke-width':4});circ(120,108+y,19,dark);circ(180,108+y,19,dark);p('M120 '+(108+y)+' l9 -9 M180 '+(108+y)+' l-8 6','none',{'stroke-width':4});rect(140,123+y,20,11,2,dark);
+ }
+ if(kind==='finger')finger();
+ else if(kind==='crown'){finger(.78,12);p('M111 22 L126 36 L150 14 L174 36 L189 22 L180 48 H120 Z');}
+ else if(kind==='skull')skull();
+ else if(kind==='battery'){rect(105,38,90,121,12);rect(133,26,34,14,3);p('M120 82 L139 93 M180 82 L161 93 M128 125 Q150 108 172 125','none',{stroke:dark,'stroke-width':5});p('M154 44 L137 70 H153 L145 83 L170 58 H153 Z',dark);}
+ else if(kind==='trophy'){p('M111 42 H189 V68 Q189 110 150 116 Q111 110 111 68 Z');p('M111 51 H86 V69 Q86 93 119 97 M189 51 H214 V69 Q214 93 181 97','none',{'stroke-width':5});rect(143,115,14,27);rect(117,141,66,14,4);finger(.36,-26);}
+ else if(kind==='sofa'){rect(91,68,118,59,12);rect(77,91,29,44,9);rect(194,91,29,44,9);rect(101,110,98,26,5);p('M92 136 V149 M208 136 V149','none',{'stroke-width':5});rect(127,81,46,24,6,dark);p('M136 93 H145 M140 89 V97 M160 93 H164','none');}
+ else if(kind==='warning'){p('M150 25 L221 151 H79 Z',ink);p('M150 59 V110','none',{stroke:dark,'stroke-width':11});circ(150,130,6,dark);}
+ else if(kind==='skeleton'){const a=sqSVG('g',{transform:'translate(60 -2) scale(.6)'});const old=g.childNodes.length;skull();while(g.childNodes.length>old)a.append(g.childNodes[old]);g.append(a);radio(14);p('M102 93 L79 119 L94 144 M198 93 L221 119 L206 144','none',{'stroke-width':5});}
+ else if(kind==='sheet'){rect(105,35,90,120,4);for(let y=58;y<150;y+=18)p('M111 '+y+' H189','none',{stroke:dark});for(let x=130;x<190;x+=20)p('M'+x+' 42 V150','none',{stroke:dark});p('M93 151 L207 38','none',{stroke:'#bd5846','stroke-width':9});}
+ else if(kind==='radio'){radio();for(const d of ['M92 30 L118 68 L78 57 Z M92 30 L96 61 M92 30 L106 64','M208 29 L180 70 L222 56 Z M208 29 L204 61 M208 29 L193 63'])p(d,'none',{stroke:'#e1cba3','stroke-width':1});}
+ else if(kind==='drone'){p('M107 55 L193 135 M193 55 L107 135','none',{'stroke-width':10});for(const [x,y] of [[105,55],[195,55],[105,135],[195,135]]){circ(x,y,25,dark);p('M'+(x-20)+' '+y+' H'+(x+20)+' M'+x+' '+(y-20)+' V'+(y+20),'none',{'stroke-width':3});}rect(132,77,36,36,7);rect(140,70,20,17,4,dark);}
+ svg.append(g);return svg;
+}
+function sqRenderAdultReverse(){
+ const golden=state.adultGolden===true;
+ const [kind,caption]=golden?['finger','CONGRATULATIONS. NOW FUCK OFF AND FLY.']:sqAdultCards[state.card];
+ const top=node('div','SQ / BLACK LABEL: UNCENSORED');top.className='sq-adult-kicker';
+ const badge=node('div',golden?'THE GOLDEN FINGER / 0.5%':'18+ / COLLECTOR SERIES');badge.className='sq-adult-badge';
+ const art=sqAdultArt(kind,golden);
+ const copy=node('h3',caption);copy.className='sq-adult-copy';
+ const foot=node('div',black.serial(state.level,state.card)+' / NO EXCUSES.');foot.className='sq-adult-kicker';
+ sqReverse.classList.add('sq-adult-reverse');sqReverse.classList.toggle('sq-golden-finger',golden);
+ sqReverse.replaceChildren(top,badge,art,copy,foot);
+}
+
 sqInspect.onclick=async()=>{
  if(busy||state.card===null)return;
  if(!sqCanFlip()){sqOldInspect();return;}
