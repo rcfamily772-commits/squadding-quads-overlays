@@ -1,8 +1,8 @@
--- SQ Pilot Dash v1.4 | Black Label | telemetry read-only, opt-in SD log, colour EdgeTX 2.11+
+-- SQ Pilot Dash v1.5 | Black Label | telemetry read-only, opt-in SD log, colour EdgeTX 2.11+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
-local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,1,1,5},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,0}}
-local palettes={{67,218,255},{99,234,154},{255,111,75},{229,190,107},{187,137,255}}
+local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,6,1,6},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,0}}
+local palettes={{67,218,255},{99,234,154},{255,111,75},{229,190,107},{187,137,255},{35,221,250}}
 local bg=rgb(5,10,17);local panel=rgb(12,22,32);local border=rgb(35,53,66)
 local white=rgb(234,244,250);local muted=rgb(139,163,180);local gold=rgb(235,193,109);local red=rgb(255,107,89)
 local function clamp(v,a,b,d) if type(v)~="number" or v~=v then return d end return max(a,min(b,floor(v))) end
@@ -164,7 +164,7 @@ end
 local function update(w,o)
  if w.reader then close(w.reader);w.reader=nil end
  o=o or {};w.armSrc=clamp(o.ArmSrc,0,65535,0);w.high=o.ArmHigh==nil or o.ArmHigh==1 or o.ArmHigh==true
- w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,5,1);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==1 or o.LogSD==true
+ w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,6,6);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==1 or o.LogSD==true
  local p=palettes[w.theme];w.accent=rgb(p[1],p[2],p[3]);w.dim=rgb(floor(p[1]*.22),floor(p[2]*.22),floor(p[3]*.22))
  w.state="SETUP";w.seenSafe=false;w.armUnknown=true;w.stats={};w.data={};w.elapsed=0;w.last=nil;w.resolved=nil;w.prevMah=nil;w.mahPartial=false;w.hist={};w.histAt=nil;w.flights=0;w.bestSpeed=nil;w.bestTime=nil;w.bestAmp=nil;w.newBest=false
  w.recent={};w.total=0;w.totalTime=0;w.allSpeed=nil;w.allTime=nil;w.allPower=nil;w.bytes=0;w.buffer="";w.loaded=false;w.readStarted=false;w.logBlocked=false;w.pending=nil;w.logPath=nil;w.safeInput=false;w.logStatus=w.logOn and "WAIT DISARM / LOAD SD" or "SD LOG OFF";w.aircraft="Aircraft";modelId(w);if w.logOn and not w.logPath then w.logStatus="SD MODEL ID UNAVAILABLE" end
@@ -183,6 +183,101 @@ local function card(x,y,W,H,label,value,sub,c)
  txt(x+6,y+15,value,f,white)
  if H>=49 and sub then txt(x+6,y+H-14,sub,SMLSIZE,c) end
 end
+-- Velocity: layered bevels, six compact instrument pods, large timer, trace and gold peak rail.
+-- Uses integer LCD primitives only; no bitmaps, animations, file I/O or new sensors.
+local navy=rgb(7,17,27);local glass=rgb(12,31,44);local bevel=rgb(33,71,88)
+local cyan=rgb(35,221,250);local dimCyan=rgb(16,67,83);local bronze=rgb(71,53,24)
+local function shell(x,y,W,H,c,inside)
+ if W<12 or H<10 then return end
+ local k=4
+ rect(x+k,y,W-2*k,H,inside);rect(x,y+k,W,H-2*k,inside)
+ line(x+k,y,x+W-k-1,y,c);line(x+k,y+H-1,x+W-k-1,y+H-1,c)
+ line(x,y+k,x,y+H-k-1,c);line(x+W-1,y+k,x+W-1,y+H-k-1,c)
+ line(x,y+k,x+k,y,c);line(x+W-k-1,y,x+W-1,y+k,c)
+ line(x,y+H-k-1,x+k,y+H-1,c);line(x+W-k-1,y+H-1,x+W-1,y+H-k-1,c)
+ if H>=18 then line(x+k+2,y+2,x+W-k-3,y+2,bevel) end
+end
+local function fit(x,y,v,f,c,maxW)
+ if lcd.sizeText and lcd.sizeText(v,f)>maxW then f=SMLSIZE end
+ txt(x,y,v,CENTER+f,c)
+end
+local function pod(x,y,W,H,label,value,c)
+ shell(x,y,W,H,bevel,glass)
+ txt(x+7,y+3,label,SMLSIZE,muted)
+ local f=H>=41 and MIDSIZE or SMLSIZE
+ if lcd.sizeText and lcd.sizeText(value,f)>W-14 then f=SMLSIZE end
+ txt(x+7,y+15,value,f,white)
+ if W>=95 and H>=37 then rect(x+W-10,y+7,3,3,c) end
+end
+local function velocity(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration)
+ local accent=rep and gold or cyan;local m=6;local g=5
+ local timerY=21;local timerH=H>=300 and 49 or 37
+ local railH=H>=300 and 37 or 28
+ local footer=16;local railY=H-footer-railH
+ local traceH=H>=300 and 44 or 30;local traceY=railY-traceH-g
+ local y=timerY+timerH+g;local h=traceY-y-g
+ local side=floor((W-2*m-2*g)*.27);local center=W-2*m-2*g-2*side
+ local cx=m+side+g+floor(center/2);local right=W-m-side
+ local ph=floor((h-2*g)/3)
+ if ph<27 or center<75 then return false end
+ rect(0,0,W,H,bg)
+ txt(m,3,"SQ / VELOCITY",SMLSIZE,accent);txt(W-m,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent)
+ line(m,17,W-m-1,17,bevel)
+ shell(m,timerY,W-2*m,timerH,rep and gold or dimCyan,navy)
+ txt(floor(W/2),timerY+2,rep and "LAST FLIGHT / ARM TIME" or "FLIGHT TIME",CENTER+SMLSIZE,accent)
+ fit(floor(W/2),timerY+13,duration,timerH>=45 and DBLSIZE or MIDSIZE,white,W-40)
+ line(m+9,timerY+floor(timerH/2),m+22,timerY+floor(timerH/2),gold)
+ line(W-m-22,timerY+floor(timerH/2),W-m-9,timerY+floor(timerH/2),gold)
+ pod(m,y,side,ph,rep and "MIN VOLT" or "VOLTAGE",fmt(d.volt,"%.2f V"),accent)
+ pod(m,y+ph+g,side,ph,rep and "PEAK AMPS" or "CURRENT",fmt(d.amp,"%.1f A"),accent)
+ pod(m,y+2*(ph+g),side,ph,rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f W"),accent)
+ pod(right,y,side,ph,rep and "MIN LINK" or "LINK QUALITY",fmt(d.lq,"%.0f%%"),accent)
+ pod(right,y+ph+g,side,ph,rep and "MIN RSSI" or "RSSI",fmt(d.rssi,"%.0f dBm"),accent)
+ pod(right,y+2*(ph+g),side,ph,rep and "MAX ALT" or "ALTITUDE",fmt(alt,"%.0f"..altUnit),accent)
+ local cy=y+floor(h*.51);local r=floor(min(center*.45,h*.46));local ratio=d.speed and min(1,max(0,d.speed/180)) or -1
+ if r>=12 then
+  lcd.drawCircle(cx,cy,r+1,bevel)
+  for i=0,31 do
+   local a=(135+i*270/31)*math.pi/180;local ca,sa=math.cos(a),math.sin(a)
+   local col=i/31<=ratio and accent or dimCyan
+   for j=0,1 do
+    local r1=max(1,r-6-j);local r2=r-j
+    local aa=a+j*.025
+    line(cx+floor(r1*math.cos(aa)),cy+floor(r1*math.sin(aa)),cx+floor(r2*math.cos(aa)),cy+floor(r2*math.sin(aa)),col)
+   end
+  end
+ end
+ txt(cx,cy-floor(r*.55),rep and "PEAK SPEED" or "GPS SPEED",CENTER+SMLSIZE,muted)
+ local value=fmt(sv,"%.0f")
+ fit(cx,cy-11,value,center>=115 and DBLSIZE or MIDSIZE,white,center-20)
+ txt(cx,cy+floor(r*.39),unit,CENTER+SMLSIZE,accent)
+ shell(m,traceY,W-2*m,traceH,bevel,navy)
+ txt(m+7,traceY+2,"SPEED TRACE",SMLSIZE,muted)
+ local sf=w.mph and .621371 or 1;local hi=1
+ for i=1,#w.hist do if w.hist[i] then hi=max(hi,w.hist[i]) end end
+ if #w.hist>0 then txt(W-m-7,traceY+2,fmt(hi*sf,"%.0f").." "..unit,RIGHT+SMLSIZE,muted) end
+ local gx=m+7;local gw=W-2*m-14;local gy=traceY+15;local gh=traceH-19
+ for i=0,4 do local xx=gx+floor(i*gw/4);line(xx,gy,xx,gy+gh,border) end
+ line(gx,gy+gh,gx+gw,gy+gh,border)
+ for i=2,#w.hist do local a,b=w.hist[i-1],w.hist[i]
+  if a and b then line(gx+floor((i-2)*gw/35),gy+gh-floor(a/hi*gh),gx+floor((i-1)*gw/35),gy+gh-floor(b/hi*gh),accent) end
+ end
+ shell(m,railY,W-2*m,railH,gold,bronze)
+ local left=m+floor((W-2*m)*.19);local half=floor(W/2)
+ local ps=w.stats.speed and w.stats.speed*sf or nil
+ local pa=w.stats.alt and w.stats.alt*(w.feet and 3.28084 or 1) or nil
+ txt(m+7,railY+3,"PEAKS",SMLSIZE,gold)
+ txt(left+5,railY+3,"TOP SPEED",SMLSIZE,gold)
+ txt(half+14,railY+3,"MAX ALT",SMLSIZE,gold)
+ line(left,railY+4,left,railY+railH-5,gold);line(half+8,railY+4,half+8,railY+railH-5,gold)
+ txt(left+5,railY+14,fmt(ps,"%.0f").." "..unit,SMLSIZE,white)
+ txt(half+14,railY+14,fmt(pa,"%.0f"..altUnit),SMLSIZE,white)
+ local note=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / SAMPLE GAP" or (w.mahReset and "mAh RESET" or (rep and w.logOn and (w.logStatus=="SD FLIGHT SAVED" and "SD SAVED" or "SEE LOGBOOK") or "BLACK LABEL / V1.5")))
+ txt(m,H-13,note,SMLSIZE,muted)
+ local used=(rep or w.state=="FLIGHT") and w.stats.mah or nil
+ if W>=380 or not w.armUnknown then txt(W-m,H-13,fmt(used,"%.0f mAh"),RIGHT+SMLSIZE,muted) end
+ return true
+end
 local function refresh(w,event,touch)
  local W,H=w.zone.w,w.zone.h;if event~=nil then W,H=LCD_W,LCD_H end
  if W<1 or H<1 then return end
@@ -198,11 +293,12 @@ local function refresh(w,event,touch)
  local cell=voltage and fmt(voltage,"%.2f V/c") or "PACK"
  local duration=time(w.elapsed)
  local alt=d.alt and d.alt*(w.feet and 3.28084 or 1) or nil;local altUnit=w.feet and " ft" or " m"
- txt(6,3,"SQ / PILOT DASH  1.4",SMLSIZE,accent)
+ txt(6,3,"SQ / PILOT DASH  1.5",SMLSIZE,accent)
  if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
  line(6,17,W-7,17,border)
  local page=w.page
  if page==4 and not w.safeInput then page=1 end
+ if page==1 and w.theme==6 and W>=320 and H>=240 and velocity(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration) then return end
  if W>=300 and H>=175 and page~=1 then
   local cw=floor((W-21)/2);local h=floor((H-60)/3);local x=8;local x2=x+cw+5;local y=38
   local function c(i,label,value,sub) card(i%2==0 and x2 or x,y+floor((i-1)/2)*(h+4),cw,h,label,value,sub,accent) end
@@ -300,7 +396,7 @@ local function refresh(w,event,touch)
    txt(bx+5,sy+16,fmt(d.watts,"%.0f W").."  |  "..fmt(w.bestSpeed and w.bestSpeed*factor,"%.0f").." "..unit,SMLSIZE,white)
   end
  end
- local foot=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / ARM OR SAMPLE GAP" or (w.mahReset and "mAh COUNTER RESET" or (w.mahPartial and "mAh PARTIAL" or "BLACK LABEL / V1.4")))
+ local foot=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / ARM OR SAMPLE GAP" or (w.mahReset and "mAh COUNTER RESET" or (w.mahPartial and "mAh PARTIAL" or "BLACK LABEL / V1.5")))
  txt(8,H-14,foot,SMLSIZE,w.gap and red or muted)
  if not w.gap and not w.armUnknown then txt(W-8,H-14,rep and (w.logOn and (w.logStatus=="SD FLIGHT SAVED" and "SAVED" or "SEE LOGBOOK") or "RE-ARM TO RESET") or "READ ONLY",RIGHT+SMLSIZE,muted) end
 end
