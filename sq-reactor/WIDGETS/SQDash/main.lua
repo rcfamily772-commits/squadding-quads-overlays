@@ -1,7 +1,7 @@
--- SQ Pilot Dash v1.3 | Black Label | read-only, colour EdgeTX 2.8+
+-- SQ Pilot Dash v1.4 | Black Label | telemetry read-only, opt-in SD log, colour EdgeTX 2.11+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
-local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,1,1,5},{"MPH",BOOL,0}}
+local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,1,1,5},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,0}}
 local palettes={{67,218,255},{99,234,154},{255,111,75},{229,190,107},{187,137,255}}
 local bg=rgb(5,10,17);local panel=rgb(12,22,32);local border=rgb(35,53,66)
 local white=rgb(234,244,250);local muted=rgb(139,163,180);local gold=rgb(235,193,109);local red=rgb(255,107,89)
@@ -39,12 +39,74 @@ local function history(w,now,v)
  w.hist[#w.hist+1]=v or false
  if #w.hist>36 then table.remove(w.hist,1) end
 end
+-- One append after observed disarm; incremental history loading when disarmed.
+local function num(v) return v and string.format("%.2f",v) or "-" end
+local function date()
+ local ok,t=pcall(getDateTime)
+ if ok and t and t.year then return string.format("%04d-%02d-%02d %02d:%02d:%02d",t.year,t.mon,t.day,t.hour,t.min,t.sec) end
+ return "unknown"
+end
+local function close(f) if f then pcall(io.close,f) end end
+local function modelId(w)
+ local ok,t=pcall(function() return model.getInfo() end)
+ if not ok or type(t)~="table" then return end
+ w.aircraft=type(t.name)=="string" and t.name or "Aircraft"
+ local id=t.filename
+ if type(id)=="string" and #id<=64 and id:match("^[%w_.%-]+$") then w.logPath="/LOGS/SQD_"..id..".csv" end
+end
+local function accept(w,r)
+ w.total=w.total+1;w.totalTime=w.totalTime+r.duration
+ if not r.partial then
+  if r.speed and (not w.allSpeed or r.speed>w.allSpeed) then w.allSpeed=r.speed end
+  if not w.allTime or r.duration>w.allTime then w.allTime=r.duration end
+  if r.watts and (not w.allPower or r.watts>w.allPower) then w.allPower=r.watts end
+ end
+ table.insert(w.recent,1,r);if #w.recent>8 then table.remove(w.recent) end
+end
+local function decode(w,line)
+ local a={};for v in (line..","):gmatch("(.-),") do a[#a+1]=v end
+ if #a~=15 or a[1]~="SQ14" or a[15]~="END" then return end
+ local d=tonumber(a[3]);if not d or d<0 or d>86400 then return end
+ accept(w,{date=a[2],duration=d,speed=tonumber(a[4]),avg=tonumber(a[5]),alt=tonumber(a[6]),volt=tonumber(a[7]),amp=tonumber(a[8]),watts=tonumber(a[9]),mah=tonumber(a[10]),lq=tonumber(a[11]),rssi=tonumber(a[12]),endV=tonumber(a[13]),partial=a[14]~="0"})
+end
+local function readLog(w)
+ if w.loaded or not w.logOn or not w.logPath then return end
+ if not w.readStarted then
+  w.readStarted=true
+  local ok,f=pcall(io.open,w.logPath,"r")
+  if not ok or not f then w.loaded=true;w.logStatus="SD READY / NEW OR UNREADABLE";return end
+  w.reader=f
+ end
+ if not w.reader then return end
+ local ok,b=pcall(io.read,w.reader,256)
+ if not ok or type(b)~="string" then close(w.reader);w.reader=nil;w.loaded=true;w.logBlocked=true;w.logStatus="SD READ ERROR";return end
+ if #b==0 then close(w.reader);w.reader=nil;w.loaded=true;w.logStatus="SD HISTORY READY";return end
+ w.bytes=w.bytes+#b
+ if w.bytes>262144 then close(w.reader);w.reader=nil;w.loaded=true;w.logBlocked=true;w.logStatus="ARCHIVE CSV / SIZE LIMIT";return end
+ local all=w.buffer..b;local pos=1
+ while true do local n=all:find("\n",pos,true);if not n then break end;decode(w,all:sub(pos,n-1):gsub("\r$",""));pos=n+1 end
+ w.buffer=all:sub(pos);if #w.buffer>512 then w.buffer="" end
+end
+local function saveLog(w)
+ if not w.pending then return end
+ local r=w.pending;w.pending=nil
+ if not w.logOn then w.logStatus="SD LOG OFF";return end
+ if not w.logPath or not w.loaded or w.logBlocked then w.logStatus="NOT SAVED / SD NOT READY";return end
+ local row=table.concat({"SQ14",r.date,num(r.duration),num(r.speed),num(r.avg),num(r.alt),num(r.volt),num(r.amp),num(r.watts),num(r.mah),num(r.lq),num(r.rssi),num(r.endV),r.partial and "1" or "0","END"},",")
+ if w.bytes+#row+2>262144 then w.logBlocked=true;w.logStatus="ARCHIVE CSV / SIZE LIMIT";return end
+ local ok,f=pcall(io.open,w.logPath,"a")
+ if not ok or not f then w.logStatus="NOT SAVED / OPEN FAILED";return end
+ local good,result=pcall(io.write,f,"\n",row,"\n");local closed=pcall(io.close,f)
+ if good and result and closed then w.bytes=w.bytes+#row+2;accept(w,r);w.logStatus="SD FLIGHT SAVED" else w.logStatus="NOT SAVED / WRITE FAILED" end
+end
 local function finish(w)
  w.flights=w.flights+1
  local s=w.stats;w.newBest=false
  if s.speed and (not w.bestSpeed or s.speed>w.bestSpeed) then w.bestSpeed=s.speed;w.newBest=true end
  if not w.bestTime or w.elapsed>w.bestTime then w.bestTime=w.elapsed end
  if s.amp and (not w.bestAmp or s.amp>w.bestAmp) then w.bestAmp=s.amp end
+ local r={date=date(),duration=w.elapsed,speed=s.speed,avg=s.avg,alt=s.alt,volt=s.volt,amp=s.amp,watts=s.watts,mah=s.mah,lq=s.lq,rssi=s.rssi,endV=w.endVolt,partial=w.gap or w.mahReset or w.mahPartial or w.speedMissing or w.voltMissing}
+ if w.logOn then w.pending=r end
 end
 local function sample(w)
  local now=getTime()
@@ -63,6 +125,7 @@ local function sample(w)
  end
  if d.volt and d.amp then d.watts=d.volt*d.amp end
  w.data=d
+ w.safeInput=armed==false
  if armed==nil then
   if w.state=="FLIGHT" then w.gap=true;history(w,now,nil) end
   w.armUnknown=true
@@ -74,7 +137,7 @@ local function sample(w)
   return
  end
  if armed and w.state~="FLIGHT" then
-  w.state="FLIGHT";w.start=now;w.stats={};w.elapsed=0;w.gap=false;w.startMah=d.mah;w.mahReset=false;w.prevMah=nil;w.mahPartial=d.mah==nil;w.hist={};w.histAt=nil;w.speedSum=0;w.speedN=0;w.newBest=false
+  w.state="FLIGHT";w.start=now;w.stats={};w.elapsed=0;w.gap=false;w.startMah=d.mah;w.mahReset=false;w.prevMah=nil;w.mahPartial=d.mah==nil;w.hist={};w.histAt=nil;w.speedSum=0;w.speedN=0;w.newBest=false;w.firstVolt=d.volt;w.endVolt=d.volt;w.speedMissing=false;w.voltMissing=false
  elseif not armed and w.state=="FLIGHT" then
   w.elapsed=max(0,(now-w.start)/100);w.state="REPORT";finish(w);return
  end
@@ -82,6 +145,8 @@ local function sample(w)
  w.elapsed=max(0,(now-w.start)/100)
  local s=w.stats
  history(w,now,d.speed)
+ if not d.speed then w.speedMissing=true end
+ if not d.volt then w.voltMissing=true else w.endVolt=d.volt end
  if d.speed then w.speedSum=w.speedSum+d.speed;w.speedN=w.speedN+1;s.avg=w.speedSum/w.speedN end
  for _,k in ipairs({"speed","amp","alt","watts"}) do if d[k]~=nil then s[k]=s[k] and max(s[k],d[k]) or d[k] end end
  for _,k in ipairs({"volt","lq","rssi"}) do if d[k]~=nil then s[k]=s[k] and min(s[k],d[k]) or d[k] end end
@@ -93,10 +158,12 @@ local function sample(w)
  end
 end
 local function update(w,o)
+ if w.reader then close(w.reader);w.reader=nil end
  o=o or {};w.armSrc=clamp(o.ArmSrc,0,65535,0);w.high=o.ArmHigh==nil or o.ArmHigh==1 or o.ArmHigh==true
- w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,5,1);w.mph=o.MPH==1 or o.MPH==true
+ w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,5,1);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==1 or o.LogSD==true
  local p=palettes[w.theme];w.accent=rgb(p[1],p[2],p[3]);w.dim=rgb(floor(p[1]*.22),floor(p[2]*.22),floor(p[3]*.22))
  w.state="SETUP";w.seenSafe=false;w.armUnknown=true;w.stats={};w.data={};w.elapsed=0;w.last=nil;w.resolved=nil;w.prevMah=nil;w.mahPartial=false;w.hist={};w.histAt=nil;w.flights=0;w.bestSpeed=nil;w.bestTime=nil;w.bestAmp=nil;w.newBest=false
+ w.recent={};w.total=0;w.totalTime=0;w.allSpeed=nil;w.allTime=nil;w.allPower=nil;w.bytes=0;w.buffer="";w.loaded=false;w.readStarted=false;w.logBlocked=false;w.pending=nil;w.logPath=nil;w.safeInput=false;w.logStatus=w.logOn and "WAIT DISARM / LOAD SD" or "SD LOG OFF";w.aircraft="Aircraft";modelId(w)
 end
 local function create(zone,o) local w={zone=zone};update(w,o);return w end
 local function fmt(v,f) return v~=nil and string.format(f,v) or "--" end
@@ -112,7 +179,7 @@ local function card(x,y,W,H,label,value,sub,c)
  txt(x+6,y+15,value,f,white)
  if H>=49 and sub then txt(x+6,y+H-14,sub,SMLSIZE,c) end
 end
-local function refresh(w,event)
+local function refresh(w,event,touch)
  sample(w)
  local W,H=w.zone.w,w.zone.h;if event~=nil then W,H=LCD_W,LCD_H end
  if W<1 or H<1 then return end
@@ -127,9 +194,48 @@ local function refresh(w,event)
  local battery=fmt(d.volt,"%.1f V")
  local cell=voltage and fmt(voltage,"%.2f V/c") or "PACK"
  local duration=time(w.elapsed)
- txt(6,3,"SQ / PILOT DASH  1.3",SMLSIZE,accent)
+ local alt=d.alt and d.alt*(w.feet and 3.28084 or 1) or nil;local altUnit=w.feet and " ft" or " m"
+ txt(6,3,"SQ / PILOT DASH  1.4",SMLSIZE,accent)
  if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
  line(6,17,W-7,17,border)
+ local page=w.page
+ if page==4 and not w.safeInput then page=1 end
+ if W>=300 and H>=175 and page~=1 then
+  local cw=floor((W-21)/2);local h=floor((H-60)/3);local x=8;local x2=x+cw+5;local y=38
+  local function c(i,label,value,sub) card(i%2==0 and x2 or x,y+floor((i-1)/2)*(h+4),cw,h,label,value,sub,accent) end
+  if page==2 then
+   txt(8,22,"02 / ESSENTIALS",SMLSIZE,accent)
+   c(1,rep and "PEAK SPEED" or "GPS SPEED",fmt(sv,"%.0f").." "..unit)
+   c(2,rep and "MAX ALT" or "ALTITUDE",fmt(alt,"%.0f"..altUnit))
+   c(3,"PACK VOLTAGE",battery,cell);c(4,"LINK QUALITY",fmt(d.lq,"%.0f%%"))
+   c(5,"ARM TIME",duration);c(6,"POWER",fmt(d.watts,"%.0f W"))
+  elseif page==3 then
+   txt(8,22,"03 / BATTERY PERFORMANCE",SMLSIZE,accent)
+   local sag=w.firstVolt and w.stats.volt and max(0,w.firstVolt-w.stats.volt) or nil
+   local m=(rep or w.state=="FLIGHT") and w.stats.mah or nil
+   c(1,rep and "MIN PACK" or "LIVE PACK",battery,cell)
+   c(2,rep and "LAST ARMED VOLT" or "MIN PACK",fmt(rep and w.endVolt or w.stats.volt,"%.2f V"))
+   c(3,"DROP FROM FIRST",fmt(sag,"%.2f V"))
+   c(4,rep and "PEAK CURRENT" or "CURRENT",fmt(d.amp,"%.1f A"))
+   c(5,"OBSERVED mAh",fmt(m,"%.0f"))
+   c(6,rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f W"))
+  else
+   txt(8,22,"04 / LOGBOOK / "..w.aircraft:sub(1,20),SMLSIZE,accent)
+   local factor=w.mph and .621371 or 1
+   local h2=H>=230 and 45 or 34
+   card(8,39,cw,h2,"SAVED FLIGHTS",tostring(w.total),nil,accent)
+   card(x2,39,cw,h2,"AIRCRAFT BEST",fmt(w.allSpeed and w.allSpeed*factor,"%.0f").." "..unit,nil,accent)
+   txt(8,43+h2,"TOTAL "..time(w.totalTime).."  |  BEST TIME "..time(w.allTime),SMLSIZE,muted)
+   local rows=min(#w.recent,floor((H-82-h2)/17))
+   for i=1,rows do local r=w.recent[i];local yy=59+h2+(i-1)*17
+    txt(8,yy,r.date:sub(1,16)..(r.partial and "*" or ""),SMLSIZE,white)
+    txt(W-8,yy,time(r.duration).."  "..fmt(r.speed and r.speed*factor,"%.0f").." "..unit,RIGHT+SMLSIZE,accent)
+   end
+  end
+  txt(8,H-14,w.logStatus,SMLSIZE,muted)
+  if W>=400 then txt(W-8,H-14,"PAGE  "..page.."/4",RIGHT+SMLSIZE,accent) end
+  return
+ end
  if W<300 or H<175 then
   txt(6,21,status,SMLSIZE,w.armUnknown and red or accent)
   txt(6,37,fmt(sv,"%.0f").." "..unit,MIDSIZE,white)
@@ -165,7 +271,7 @@ local function refresh(w,event)
  txt(cx,y+top-15,unit,CENTER+SMLSIZE,accent)
  local by=y+top+gap;local bw=floor((W-2*margin-3*gap)/4)
  card(margin,by,bw,bot,"FLIGHT TIME",duration,nil,accent)
- card(margin+bw+gap,by,bw,bot,rep and "MAX ALT" or "ALTITUDE",fmt(d.alt,"%.0f m"),nil,accent)
+ card(margin+bw+gap,by,bw,bot,rep and "MAX ALT" or "ALTITUDE",fmt(alt,"%.0f"..altUnit),nil,accent)
  local m=rep and d.mah or nil;if w.state=="FLIGHT" and d.mah~=nil then m=w.stats.mah end
  card(margin+2*(bw+gap),by,bw,bot,"USED mAh",fmt(m,"%.0f"),nil,accent)
  card(margin+3*(bw+gap),by,bw,bot,rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f W"),nil,accent)
@@ -191,16 +297,24 @@ local function refresh(w,event)
    txt(bx+5,sy+16,fmt(d.watts,"%.0f W").."  |  "..fmt(w.bestSpeed and w.bestSpeed*factor,"%.0f").." "..unit,SMLSIZE,white)
   end
  end
- local foot=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / ARM OR SAMPLE GAP" or (w.mahReset and "mAh COUNTER RESET" or (w.mahPartial and "mAh PARTIAL" or "BLACK LABEL / V1.3")))
+ local foot=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / ARM OR SAMPLE GAP" or (w.mahReset and "mAh COUNTER RESET" or (w.mahPartial and "mAh PARTIAL" or "BLACK LABEL / V1.4")))
  txt(8,H-14,foot,SMLSIZE,w.gap and red or muted)
- if not w.gap and not w.armUnknown then txt(W-8,H-14,rep and "RE-ARM TO RESET" or "READ ONLY",RIGHT+SMLSIZE,muted) end
+ if not w.gap and not w.armUnknown then txt(W-8,H-14,rep and (w.logOn and (w.logStatus=="SD FLIGHT SAVED" and "SAVED" or "SEE LOGBOOK") or "RE-ARM TO RESET") or "READ ONLY",RIGHT+SMLSIZE,muted) end
 end
 -- Reset consumption bookkeeping on each observed arm edge.
 local function poll(w)
  local old=w.state;sample(w)
+ if w.safeInput and w.seenSafe then readLog(w);saveLog(w) end
  if old~="FLIGHT" and w.state=="FLIGHT" then w.prevMah=w.data.mah;w.mahPartial=w.startMah==nil;w.mahReset=false;w.stats.mah=w.startMah and 0 or nil end
 end
 -- refresh uses poll via background before drawing; sample is throttled.
 local draw=refresh
-refresh=function(w,event,touch) poll(w);draw(w,event,touch) end
+refresh=function(w,event,touch)
+ poll(w)
+ if event and event~=0 and w.safeInput then
+  if event==EVT_VIRTUAL_NEXT_PAGE or event==EVT_VIRTUAL_NEXT then w.page=w.page%4+1
+  elseif event==EVT_VIRTUAL_PREV_PAGE or event==EVT_VIRTUAL_PREV then w.page=(w.page+2)%4+1 end
+ end
+ draw(w,event,touch)
+end
 return {name="SQDash",options=options,create=create,update=update,background=poll,refresh=refresh}
