@@ -1,10 +1,15 @@
-# SQ Pilot Dash v1.1 — Black Label
+# SQ Pilot Dash v1.3 — Black Label
 
 **Formerly SQ Reactor.** The existing project has evolved from a decorative animated core into a read-only FPV telemetry dashboard. Reactor v1.0 remains available unchanged.
 
-[Project page, interactive demo and v1.1 ZIP](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
+[Project page, interactive demo and v1.3 ZIP](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
 
-## v1.1 field preview
+## v1.3 Performance Edition (field preview)
+- Layered instrument panels, 32-segment speed dial, estimated electrical power (sampled volts × amps), peak power on the debrief.
+- Up to 36 approximately one-second speed samples, frozen on disarm; trace uses an automatic scale and is displayed on large zones (400×230 or larger). Missing samples break the trace.
+- Sample mean GPS speed and completed-flight session speed records; records survive re-arm but not settings changes or widget reload. No SD writes. Session records are not certified personal records.
+- Original v1.1 available at [the archived page](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.1/).
+
 - Live GPS ground speed (km/h or mph), voltage, current, LQ, RSSI dBm, altitude, flight timer and observed mAh consumption.
 - Automatic last-flight view: sampled peak speed/current/altitude, minimum voltage/LQ and weakest RSSI; observed mAh delta and arm-input elapsed time.
 - Five palettes, segmented speed dial, compact zone layout, gold last-flight report.
@@ -23,7 +28,7 @@ In widget settings:
 Discover sensors and verify battery sensor corresponds to the aircraft pack (RxBt can represent receiver supply). GPS speed and altitude require appropriate compatible sensors. No values are invented when sensors are absent. Sampled extrema are not flight-controller blackbox maxima. Arm input is not verified FC arm status. Capacity is a delta from the first observed value; a reset invalidates it. Missing samples can hide peaks; report stays in RAM until re-arm, settings change or reload. Colour EdgeTX 2.8+ target, physical radio validation pending. Never rely on this widget for flight safety. No control, model or SD writes.
 
 ## Validation
-Browser JS checked with mocked DOM: arm, changing simulated speed, disarm, frozen report, re-arm, missing GPS, ZIP entry and payload. Actual browser rendering, EdgeTX Lua runtime, physical hardware and Pages deployment not verified by this check.
+The v1.1 browser JS was checked with a mocked DOM. v1.3 adds simulated session records, power and trace; physical radio testing remains pending. Actual browser rendering, EdgeTX Lua runtime, physical hardware and Pages deployment not verified by this check.
 
 Original Reactor v1.0: SQ_Reactor_v1.0.zip and WIDGETS/SQReact/main.lua retained. Existing smoke.lua pertains to v1.0.
 
