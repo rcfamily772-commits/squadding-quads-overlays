@@ -37,7 +37,7 @@ function render(){
  const report=mode==='report',rows=rowsFor(name()),valid=rows.filter(r=>r&&Number.isFinite(r.duration));
  const complete=valid.filter(r=>!r.partial),maxOf=k=>{const a=complete.map(r=>r[k]).filter(Number.isFinite);return a.length?Math.max(...a):null;};
  const [width,height]=$('size').value.split('x').map(Number);
- const theme=+$('palette').value,colors=['43daff','63ea9a','ff6f4b','e5be6b','bb89ff','62dae7','d8b782'],hex=colors[theme-1];
+ const theme=+$('palette').value,colors=['43daff','63ea9a','ff6f4b','e5be6b','bb89ff','62dae7','d8b782','cfa471'],hex=colors[theme-1];
  if(page===4&&mode==='flight')page=1;
  const snap={width,height,theme,mph:$('units').value==='mph',feet:$('altUnits').value==='ft',page,aircraft:name(),state:report?'REPORT':mode==='flight'?'FLIGHT':'READY',elapsed,flights:packs,newBest,bestSpeed:best,bestTime:null,bestAmp:null,firstVolt,endVolt,
   total:valid.length,totalTime:valid.reduce((t,r)=>t+r.duration,0),allSpeed:maxOf('speed'),allPower:maxOf('watts'),allTime:maxOf('duration'),logStatus:storeOK?'LOCAL DEMO HISTORY':'MEMORY ONLY / STORAGE UNAVAILABLE',gap:false,speedMissing:gpsMissing,armUnknown:false,seenSafe:true,safeInput:mode!=='flight',r:parseInt(hex.slice(0,2),16),g:parseInt(hex.slice(2,4),16),b:parseInt(hex.slice(4,6),16),
@@ -54,7 +54,7 @@ function render(){
 async function init(){
  try{
   [source,adapter]=await Promise.all(['WIDGETS/SQDash/main.lua','preview-runtime.lua'].map(async u=>{const r=await fetch(u,{cache:'no-cache'});if(!r.ok)throw Error('could not load renderer');return r.text();}));
-  worker=new Worker('preview-worker.js?v=1.8.1');
+  worker=new Worker('preview-worker.js?v=1.8.2');
   worker.onerror=e=>fail(e.message||'worker error');
   worker.onmessage=({data})=>{
    clearTimeout(deadline);busy=false;if(data.error){fail(data.error);return;}

@@ -1,14 +1,14 @@
-# SQ Pilot Dash v1.8.1 · APEX Nocturne
+# SQ Pilot Dash v1.8.2 · APEX Tailor
 
-[Launch the live preview](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/) · [Download v1.8.1](SQ-Pilot-Dash-v1.8.1-Nocturne.zip) · [Design board](design/nocturne/overview.png) · [Previous APEX v1.8](v1.8/)
+[Launch the live preview](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/) · [Download v1.8.2](SQ-Pilot-Dash-v1.8.2-Tailor.zip) · [Design board](design/tailor/overview.png) · [Previous Nocturne v1.8.1](v1.8.1/)
 
-Nocturne is Theme 7 for Squadding Quads Pilot Dash. The speed figures, Apex hallmark and flight trace are drawn directly on the radio. A dark oxblood band frames the frozen last-flight report.
+Tailor is Theme 8 for Squadding Quads Pilot Dash. Its camel instrument panel has a diagonal edge, with custom black condensed figures and a separate arm timer. The main panel turns chalk on disarm and displays the frozen flight values. The Logbook uses dark text on a chalk background.
 
 ## Install or upgrade
 
 1. Extract the ZIP. Copy its **WIDGETS** folder to the root of your radio SD card, merging the folder and replacing `WIDGETS/SQDash/main.lua`. For an existing installation you can replace just the Lua file.
 2. Restart EdgeTX. Open SQDash settings on your existing widget, or add SQDash to a large colour widget zone.
-3. Select **Theme 7** for Nocturne. Theme 6 selects the ice-blue APEX v1.8 design, and themes 1–5 select the classic instrument layouts. New instances default to Nocturne.
+3. Select **Theme 8** for Tailor. Theme 7 selects Nocturne. Theme 6 selects the ice-blue APEX v1.8 design, and themes 1–5 select the classic instrument layouts. New instances default to Tailor.
 4. Choose a layout and your preferred speed and altitude units. For a first setup, select the arm AUX channel or switch under **ArmSrc** and match its polarity under **ArmHigh**. Verify both positions with the props removed.
 
 The main design target is a 480 × 272 landscape zone on colour EdgeTX 2.11 or later. Larger layouts reflow. The peak rail gives way to the live readings in shallow Performance zones. Very small zones show a compact readout.
@@ -28,10 +28,10 @@ The optional **LogSD** setting uses the existing `/LOGS/SQD_<model filename>.csv
 
 ## Offline preview
 
-Open **APEX-Nocturne-Preview.html** from the extracted ZIP in a modern browser. Choose a layout, start a demo flight, adjust the throttle and finish the flight to see the report. Preview settings include screen size, themes, independent units and simulated GPS loss. Demo history stays in the browser. The HTML runs the packaged Lua drawing code against simulated state. Its fonts approximate the radio display. A static design proof is included for viewers that cannot run the interactive preview.
+Open **APEX-Tailor-Preview.html** from the extracted ZIP in a modern browser. Choose a layout, start a demo flight, adjust the throttle and finish the flight to see the report. Preview settings include screen size, themes, independent units and simulated GPS loss. Demo history stays in the browser. The HTML runs the packaged Lua drawing code against simulated state. Its fonts approximate the radio display. A static design proof is included for viewers that cannot run the interactive preview.
 
 ## Verification
 
-The v1.8 and v1.8.1 Lua builds were compared against the v1.8 behavioural checks. The new theme passed desktop Lua checks for arm gating, missing GPS, zero link quality, unit conversion and a frozen report. The preview worker's packaged code also ran with a mock display across all seven themes. Physical radio rendering, CPU and memory use, and SD I/O remain to be checked on hardware.
+The regression harness exercised the APEX, Nocturne and Tailor renderers in this build. The new theme passed desktop Lua checks for arm gating, missing GPS, zero link quality, unit conversion and a frozen report. The preview worker's packaged code also ran with a mock display across all eight themes. Physical radio rendering, CPU and memory use, and SD I/O remain to be checked on hardware.
 
-Run the desktop Lua harness from the repository root with `python3 sq-reactor/tests/run-lua.py` for APEX and `SQ_DASH_THEME=7 python3 sq-reactor/tests/run-lua.py` for Nocturne.
+Run the desktop Lua harness from the repository root with `SQ_DASH_THEME=8 python3 sq-reactor/tests/run-lua.py`. Set the theme to 7 or 6 to check Nocturne or APEX.

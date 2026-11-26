@@ -2,7 +2,7 @@
 
 [Open the central tools hub](https://rcfamily772-commits.github.io/squadding-quads-overlays/tools/)
 
-- **[SQ Pilot Dash · APEX Nocturne](../sq-reactor/)** — Preview four EdgeTX telemetry layouts and download the v1.8.1 radio widget. Select Theme 7 for Nocturne.
+- **[SQ Pilot Dash · APEX Tailor](../sq-reactor/)** — Preview four EdgeTX telemetry layouts and download the v1.8.2 radio widget. Select Theme 8 for Tailor.
 - **Pack Lottery** — Draw a real-world FPV challenge from six decks. Collect rare cards, earn achievements and build your Pilot Passport.
 - **Wallpaper Shuffle** — Give your radio a fresh look every time it starts. Browse the SQ wallpaper library, shuffle manually or hide the controls for a clean view.
 - **RF Doctor** — See live radio-link telemetry, capture session statistics and compare exported CSV logs from two test flights in the browser.

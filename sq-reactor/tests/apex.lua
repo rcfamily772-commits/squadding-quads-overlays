@@ -6,7 +6,7 @@ EVT_VIRTUAL_NEXT_PAGE,EVT_VIRTUAL_PREV_PAGE=100,101
 EVT_VIRTUAL_NEXT,EVT_VIRTUAL_PREV=102,103
 LCD_W,LCD_H=480,272
 local theme=tonumber(os.getenv("SQ_DASH_THEME") or "6")
-assert(theme==6 or theme==7)
+assert(theme==6 or theme==7 or theme==8)
 local tick,arm=0,-1024
 local W,H=480,272
 local readings={speed=123,volt=24.1,amp=32.6,mah=100,lq=97,rssi=-68,alt=42}
@@ -39,7 +39,7 @@ function lcd.drawLine(x,y,X,Y,p,c) pt(x,y);pt(X,Y);emit('drawLine',x,y,X,Y,p,c) 
 function lcd.drawCircle(x,y,r,c) pt(x-r,y-r);pt(x+r,y+r);emit('drawCircle',x,y,r,c) end
 function lcd.drawFilledTriangle(x,y,X,Y,xx,yy,c) pt(x,y);pt(X,Y);pt(xx,yy);emit('drawFilledTriangle',x,y,X,Y,xx,yy,c) end
 local api=assert(loadfile('sq-reactor/WIDGETS/SQDash/main.lua'))()
-assert(api.create({w=W,h=H},{}).theme==7, "new widget must default to Nocturne")
+assert(api.create({w=W,h=H},{}).theme==8, "new widget must default to Tailor")
 local function setup()
  tick=tick+20;arm=-1024
  local w=api.create({w=W,h=H},{ArmSrc=1,ArmHigh=1,Theme=theme,Cells=6})
@@ -77,7 +77,7 @@ end
 W,H=480,272;strict=true
 w=api.create({w=W,h=H},{Theme=theme});draw(w);assert(labels['SET ARM SOURCE'])
 -- Export reproducible primitive recordings for the design proof; not photographs.
-local out=io.open(theme==7 and '/tmp/sq-nocturne-frames.json' or '/tmp/sq-apex-frames.json','w');out:write('[')
+local out=io.open(theme==8 and '/tmp/sq-tailor-frames.json' or theme==7 and '/tmp/sq-nocturne-frames.json' or '/tmp/sq-apex-frames.json','w');out:write('[')
 local function json(v)
  if type(v)=='string' then return string.format('%q',v):gsub('\\\n','\\n') end
  if type(v)=='number' then return tostring(v) end
