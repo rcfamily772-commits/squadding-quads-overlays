@@ -46,12 +46,13 @@ local function date()
  if ok and t and t.year then return string.format("%04d-%02d-%02d %02d:%02d:%02d",t.year,t.mon,t.day,t.hour,t.min,t.sec) end
  return "unknown"
 end
-local function close(f) if f then pcall(io.close,f) end end
+local function close(f) if f and io then pcall(io.close,f) end end
 local function modelId(w)
  local ok,t=pcall(function() return model.getInfo() end)
  if not ok or type(t)~="table" then return end
  w.aircraft=type(t.name)=="string" and t.name or "Aircraft"
  local id=t.filename
+ if type(id)=="string" then id=id:match("([^/]+)$") end
  if type(id)=="string" and #id<=64 and id:match("^[%w_.%-]+$") then w.logPath="/LOGS/SQD_"..id..".csv" end
 end
 local function accept(w,r)
@@ -70,6 +71,7 @@ local function decode(w,line)
  accept(w,{date=a[2],duration=d,speed=tonumber(a[4]),avg=tonumber(a[5]),alt=tonumber(a[6]),volt=tonumber(a[7]),amp=tonumber(a[8]),watts=tonumber(a[9]),mah=tonumber(a[10]),lq=tonumber(a[11]),rssi=tonumber(a[12]),endV=tonumber(a[13]),partial=a[14]~="0"})
 end
 local function readLog(w)
+ if not io or not io.open or not io.read or not io.close or not io.write then w.loaded=true;w.logBlocked=true;w.logStatus="SD API UNAVAILABLE";return end
  if w.loaded or not w.logOn or not w.logPath then return end
  if not w.readStarted then
   w.readStarted=true
@@ -105,7 +107,7 @@ local function finish(w)
  if s.speed and (not w.bestSpeed or s.speed>w.bestSpeed) then w.bestSpeed=s.speed;w.newBest=true end
  if not w.bestTime or w.elapsed>w.bestTime then w.bestTime=w.elapsed end
  if s.amp and (not w.bestAmp or s.amp>w.bestAmp) then w.bestAmp=s.amp end
- local r={date=date(),duration=w.elapsed,speed=s.speed,avg=s.avg,alt=s.alt,volt=s.volt,amp=s.amp,watts=s.watts,mah=s.mah,lq=s.lq,rssi=s.rssi,endV=w.endVolt,partial=w.gap or w.mahReset or w.mahPartial or w.speedMissing or w.voltMissing}
+ local r={date=date(),duration=w.elapsed,speed=s.speed,avg=s.avg,alt=s.alt,volt=s.volt,amp=s.amp,watts=s.watts,mah=s.mah,lq=s.lq,rssi=s.rssi,endV=w.endVolt,partial=w.gap or w.mahReset or w.mahPartial or (w.speedMissing and s.speed~=nil) or (w.voltMissing and s.volt~=nil)}
  if w.logOn then w.pending=r end
 end
 local function sample(w)
@@ -137,6 +139,7 @@ local function sample(w)
   return
  end
  if armed and w.state~="FLIGHT" then
+  if w.pending then w.pending=nil;w.logStatus="NOT SAVED / RE-ARMED" end
   w.state="FLIGHT";w.start=now;w.stats={};w.elapsed=0;w.gap=false;w.startMah=d.mah;w.mahReset=false;w.prevMah=nil;w.mahPartial=d.mah==nil;w.hist={};w.histAt=nil;w.speedSum=0;w.speedN=0;w.newBest=false;w.firstVolt=d.volt;w.endVolt=d.volt;w.speedMissing=false;w.voltMissing=false
  elseif not armed and w.state=="FLIGHT" then
   w.elapsed=max(0,(now-w.start)/100);w.state="REPORT";finish(w);return
@@ -180,7 +183,6 @@ local function card(x,y,W,H,label,value,sub,c)
  if H>=49 and sub then txt(x+6,y+H-14,sub,SMLSIZE,c) end
 end
 local function refresh(w,event,touch)
- sample(w)
  local W,H=w.zone.w,w.zone.h;if event~=nil then W,H=LCD_W,LCD_H end
  if W<1 or H<1 then return end
  rect(0,0,W,H,bg)
@@ -207,8 +209,8 @@ local function refresh(w,event,touch)
    txt(8,22,"02 / ESSENTIALS",SMLSIZE,accent)
    c(1,rep and "PEAK SPEED" or "GPS SPEED",fmt(sv,"%.0f").." "..unit)
    c(2,rep and "MAX ALT" or "ALTITUDE",fmt(alt,"%.0f"..altUnit))
-   c(3,"PACK VOLTAGE",battery,cell);c(4,"LINK QUALITY",fmt(d.lq,"%.0f%%"))
-   c(5,"ARM TIME",duration);c(6,"POWER",fmt(d.watts,"%.0f W"))
+   c(3,rep and "MIN PACK" or "PACK VOLTAGE",battery,cell);c(4,rep and "MIN LINK" or "LINK QUALITY",fmt(d.lq,"%.0f%%"))
+   c(5,"ARM TIME",duration);c(6,rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f W"))
   elseif page==3 then
    txt(8,22,"03 / BATTERY PERFORMANCE",SMLSIZE,accent)
    local sag=w.firstVolt and w.stats.volt and max(0,w.firstVolt-w.stats.volt) or nil
@@ -260,7 +262,7 @@ local function refresh(w,event,touch)
  local ratio=sv and min(1,max(0,d.speed/180)) or 0
  for i=0,31 do
   local a=(135+i*270/31)*math.pi/180
-  local r1=radius-(i%4==0 and 8 or 4)
+  local r1=max(1,radius-(i%4==0 and 8 or 4))
   line(cx+floor(r1*math.cos(a)),cy+floor(r1*math.sin(a)),cx+floor(radius*math.cos(a)),cy+floor(radius*math.sin(a)),sv and i/31<=ratio and accent or w.dim)
  end
  txt(cx,y+5,rep and "PEAK SPEED" or "GPS SPEED",CENTER+SMLSIZE,muted)
@@ -303,8 +305,8 @@ local function refresh(w,event,touch)
 end
 -- Reset consumption bookkeeping on each observed arm edge.
 local function poll(w)
- local old=w.state;sample(w)
- if w.safeInput and w.seenSafe then readLog(w);saveLog(w) end
+ local old=w.state;local before=w.last;sample(w)
+ if before~=w.last and w.safeInput and w.seenSafe then readLog(w);if w.loaded or not w.logPath then saveLog(w) end end
  if old~="FLIGHT" and w.state=="FLIGHT" then w.prevMah=w.data.mah;w.mahPartial=w.startMah==nil;w.mahReset=false;w.stats.mah=w.startMah and 0 or nil end
 end
 -- refresh uses poll via background before drawing; sample is throttled.
