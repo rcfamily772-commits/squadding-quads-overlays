@@ -43,7 +43,7 @@ end
 local function num(v) return v and string.format("%.2f",v) or "-" end
 local function date()
  local ok,t=pcall(getDateTime)
- if ok and t and t.year then return string.format("%04d-%02d-%02d %02d:%02d:%02d",t.year,t.mon,t.day,t.hour,t.min,t.sec) end
+ if ok and type(t)=="table" and t.year and t.mon and t.day and t.hour and t.min and t.sec then return string.format("%04d-%02d-%02d %02d:%02d:%02d",t.year,t.mon,t.day,t.hour,t.min,t.sec) end
  return "unknown"
 end
 local function close(f) if f and io then pcall(io.close,f) end end
@@ -71,6 +71,7 @@ local function decode(w,line)
  accept(w,{date=a[2],duration=d,speed=tonumber(a[4]),avg=tonumber(a[5]),alt=tonumber(a[6]),volt=tonumber(a[7]),amp=tonumber(a[8]),watts=tonumber(a[9]),mah=tonumber(a[10]),lq=tonumber(a[11]),rssi=tonumber(a[12]),endV=tonumber(a[13]),partial=a[14]~="0"})
 end
 local function readLog(w)
+ if not w.logOn then return end
  if not io or not io.open or not io.read or not io.close or not io.write then w.loaded=true;w.logBlocked=true;w.logStatus="SD API UNAVAILABLE";return end
  if w.loaded or not w.logOn or not w.logPath then return end
  if not w.readStarted then
@@ -107,7 +108,7 @@ local function finish(w)
  if s.speed and (not w.bestSpeed or s.speed>w.bestSpeed) then w.bestSpeed=s.speed;w.newBest=true end
  if not w.bestTime or w.elapsed>w.bestTime then w.bestTime=w.elapsed end
  if s.amp and (not w.bestAmp or s.amp>w.bestAmp) then w.bestAmp=s.amp end
- local r={date=date(),duration=w.elapsed,speed=s.speed,avg=s.avg,alt=s.alt,volt=s.volt,amp=s.amp,watts=s.watts,mah=s.mah,lq=s.lq,rssi=s.rssi,endV=w.endVolt,partial=w.gap or w.mahReset or w.mahPartial or (w.speedMissing and s.speed~=nil) or (w.voltMissing and s.volt~=nil)}
+ local r={date=date(),duration=w.elapsed,speed=s.speed,avg=s.avg,alt=s.alt,volt=s.volt,amp=s.amp,watts=s.watts,mah=s.mah,lq=s.lq,rssi=s.rssi,endV=w.endVolt,partial=w.gap or w.mahReset or (w.mahPartial and s.mah~=nil) or (w.speedMissing and s.speed~=nil) or (w.voltMissing and s.volt~=nil)}
  if w.logOn then w.pending=r end
 end
 local function sample(w)
@@ -166,7 +167,7 @@ local function update(w,o)
  w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,5,1);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==1 or o.LogSD==true
  local p=palettes[w.theme];w.accent=rgb(p[1],p[2],p[3]);w.dim=rgb(floor(p[1]*.22),floor(p[2]*.22),floor(p[3]*.22))
  w.state="SETUP";w.seenSafe=false;w.armUnknown=true;w.stats={};w.data={};w.elapsed=0;w.last=nil;w.resolved=nil;w.prevMah=nil;w.mahPartial=false;w.hist={};w.histAt=nil;w.flights=0;w.bestSpeed=nil;w.bestTime=nil;w.bestAmp=nil;w.newBest=false
- w.recent={};w.total=0;w.totalTime=0;w.allSpeed=nil;w.allTime=nil;w.allPower=nil;w.bytes=0;w.buffer="";w.loaded=false;w.readStarted=false;w.logBlocked=false;w.pending=nil;w.logPath=nil;w.safeInput=false;w.logStatus=w.logOn and "WAIT DISARM / LOAD SD" or "SD LOG OFF";w.aircraft="Aircraft";modelId(w)
+ w.recent={};w.total=0;w.totalTime=0;w.allSpeed=nil;w.allTime=nil;w.allPower=nil;w.bytes=0;w.buffer="";w.loaded=false;w.readStarted=false;w.logBlocked=false;w.pending=nil;w.logPath=nil;w.safeInput=false;w.logStatus=w.logOn and "WAIT DISARM / LOAD SD" or "SD LOG OFF";w.aircraft="Aircraft";modelId(w);if w.logOn and not w.logPath then w.logStatus="SD MODEL ID UNAVAILABLE" end
 end
 local function create(zone,o) local w={zone=zone};update(w,o);return w end
 local function fmt(v,f) return v~=nil and string.format(f,v) or "--" end
@@ -227,7 +228,7 @@ local function refresh(w,event,touch)
    local h2=H>=230 and 45 or 34
    card(8,39,cw,h2,"SAVED FLIGHTS",tostring(w.total),nil,accent)
    card(x2,39,cw,h2,"AIRCRAFT BEST",fmt(w.allSpeed and w.allSpeed*factor,"%.0f").." "..unit,nil,accent)
-   txt(8,43+h2,"TOTAL "..time(w.totalTime).."  |  BEST TIME "..time(w.allTime),SMLSIZE,muted)
+   txt(8,43+h2,"TOTAL "..time(w.totalTime).."  |  BEST "..(w.allTime and time(w.allTime) or "--").."  |  "..fmt(w.allPower,"%.0f W"),SMLSIZE,muted)
    local rows=min(#w.recent,floor((H-82-h2)/17))
    for i=1,rows do local r=w.recent[i];local yy=59+h2+(i-1)*17
     txt(8,yy,r.date:sub(1,16)..(r.partial and "*" or ""),SMLSIZE,white)
