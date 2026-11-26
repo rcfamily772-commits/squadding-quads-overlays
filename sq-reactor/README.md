@@ -1,10 +1,17 @@
-# SQ Pilot Dash v1.5 — Black Label Velocity Edition
+# SQ Pilot Dash v1.6 — Velocity / V15 Landscape Edition
 
-Formerly SQ Reactor. [Project page, four-layout browser demo and v1.5 ZIP](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/).
+Formerly SQ Reactor. [Project page, four-layout browser demo and v1.6 ZIP](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/).
 
-## v1.5 Velocity (experimental field preview)
+## v1.6 V15 landscape correction (experimental field preview)
+- Primary target: HelloRadioSky V15 Ultra, native 480×272 landscape, confirmed by LCD_W/LCD_H in the EdgeTX 2.12 V15 HAL: https://github.com/EdgeTX/edgetx/blob/2.12/radio/src/targets/hrs/v15/hal.h .
+- Reflow rather than stretch: three header modules, six telemetry pods, circular speed dial with equal pixel radii, full-width trace, gold peaks rail and footer. Timer moves to centre header.
+- Full layout reflows to actual widget zones at least 400×190 and aspect ratio ≥1.45, subject to minimum tile height; smaller/portrait zones use the previous adaptive fallback.
+- Browser preview uses a fixed 480×272 SVG viewBox with preserved aspect ratio; artwork is illustrative and firmware fonts may differ. Theme 6 selects Velocity.
+- Existing SD journal and telemetry features unchanged. [Archived v1.5](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.5/).
+
+## Velocity features
 - Theme 6 (default for new instances): blue glass-inspired bevelled instrument pods, large flight timer, central segmented speed dial, full-width rolling trace and a gold current/last-flight peaks rail.
-- Six total themes; themes 1–5 retain their earlier layout. Existing saved widget settings may retain the previous theme: set Theme=6 explicitly to activate Velocity. The full cockpit requires a zone of at least 320×240; smaller zones use the previous adaptive layout.
+- Six total themes; themes 1–5 retain their earlier layout. Existing saved widget settings may retain the previous theme: set Theme=6 explicitly to activate Velocity. See v1.6 landscape requirements above.
 - The browser uses CSS gradients/glow; the actual radio uses lightweight LCD primitives and does not replicate the concept photograph pixel-for-pixel. No Oxbot firmware support is implied.
 - Existing log schema, demo storage key, four layouts and telemetry collection remain unchanged. Archived [v1.4](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.4/) remains available.
 
@@ -31,6 +38,7 @@ A dash denotes unavailable data. Partial rows are marked and excluded from aircr
 Discover sensors and verify values, especially RxBt (can represent receiver supply, not aircraft pack). GPS speed and altitude require compatible telemetry. Power = sampled voltage × current; pack voltage drop is relative to the first armed voltage, not measured internal resistance or true transient sag. Observed arm time follows the configured radio source, not confirmed FC arm state. Speed average is a sample mean; missing/stale values omitted. Missing samples can hide extrema. Session-only bests survive re-arm, not reload; SD aircraft records survive restart if successfully saved. Never use as a safety instrument. Remove if radio performance suffers.
 
 ## Validation
+v1.6 mocked browser tests passed: native view, 32 ticks, timer, power, trace, feet/metres, frozen peaks, logbook retention, legacy theme switch, unique IDs, 480×272 viewBox and ZIP payload. A geometry calculation mirroring the Lua layout passed at 480×272, 460×232, 460×210 and 400×190; 320×240 takes the fallback. This is not a Lua runtime, font-rendering or on-radio test. Live Pages deployment remains unverified.
 v1.5 mocked browser checks passed: default Velocity selection, live timer and wattage, feet/metres conversion, frozen peaks on disarm, legacy theme selection, logbook retention, unique HTML IDs and ZIP source payload. Lua rendering and radio performance remain untested on physical hardware.
 Prior v1.4 browser logic passed mocked DOM checks of feet/metres conversion, battery layout, logbook count, separate aircraft, persistence after reload and ZIP entry/payload. The Lua runtime, physical radio, SD I/O on hardware, actual browser rendering and live GitHub Pages deployment have not been verified. This remains a field preview.
 
