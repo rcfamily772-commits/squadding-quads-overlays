@@ -74,7 +74,7 @@ local function sample(w)
   return
  end
  if armed and w.state~="FLIGHT" then
-  w.state="FLIGHT";w.start=now;w.stats={};w.elapsed=0;w.gap=false;w.startMah=d.mah;w.mahReset=false;w.prevMah=nil;w.mahPartial=d.mah==nil;w.hist={};w.histAt=nil;w.speedSum=0;w.speedN=0;w.startVolt=d.volt;w.newBest=false
+  w.state="FLIGHT";w.start=now;w.stats={};w.elapsed=0;w.gap=false;w.startMah=d.mah;w.mahReset=false;w.prevMah=nil;w.mahPartial=d.mah==nil;w.hist={};w.histAt=nil;w.speedSum=0;w.speedN=0;w.newBest=false
  elseif not armed and w.state=="FLIGHT" then
   w.elapsed=max(0,(now-w.start)/100);w.state="REPORT";finish(w);return
  end
@@ -83,7 +83,6 @@ local function sample(w)
  local s=w.stats
  history(w,now,d.speed)
  if d.speed then w.speedSum=w.speedSum+d.speed;w.speedN=w.speedN+1;s.avg=w.speedSum/w.speedN end
- if d.volt and not w.startVolt then w.startVolt=d.volt end
  for _,k in ipairs({"speed","amp","alt","watts"}) do if d[k]~=nil then s[k]=s[k] and max(s[k],d[k]) or d[k] end end
  for _,k in ipairs({"volt","lq","rssi"}) do if d[k]~=nil then s[k]=s[k] and min(s[k],d[k]) or d[k] end end
  if d.mah then
@@ -111,7 +110,7 @@ local function card(x,y,W,H,label,value,sub,c)
  local f=H>=47 and MIDSIZE or SMLSIZE
  if lcd.sizeText and lcd.sizeText(value,f)>W-12 then f=SMLSIZE end
  txt(x+6,y+15,value,f,white)
- if H>=57 and sub then txt(x+6,y+H-14,sub,SMLSIZE,c) end
+ if H>=49 and sub then txt(x+6,y+H-14,sub,SMLSIZE,c) end
 end
 local function refresh(w,event)
  sample(w)
@@ -169,11 +168,11 @@ local function refresh(w,event)
  card(margin+bw+gap,by,bw,bot,rep and "MAX ALT" or "ALTITUDE",fmt(d.alt,"%.0f m"),nil,accent)
  local m=rep and d.mah or nil;if w.state=="FLIGHT" and d.mah~=nil then m=w.stats.mah end
  card(margin+2*(bw+gap),by,bw,bot,"USED mAh",fmt(m,"%.0f"),nil,accent)
- card(margin+3*(bw+gap),by,bw,bot,"PACK / CELL",voltage and fmt(voltage,"%.2f V") or "--",nil,accent)
+ card(margin+3*(bw+gap),by,bw,bot,rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f W"),nil,accent)
  if rich then
   local sy=by+bot+4;local sw=floor(W*.49);local bx=margin+sw+gap;local rw=W-bx-margin
   rect(margin,sy,sw,strip-6,panel);lcd.drawRectangle(margin,sy,sw,strip-6,border)
-  txt(margin+5,sy+2,"SPEED TRACE / LAST 36s",SMLSIZE,muted)
+  txt(margin+5,sy+2,"SPEED TRACE / 36 SAMPLES",SMLSIZE,muted)
   local peak=1;for i=1,#w.hist do if w.hist[i] then peak=max(peak,w.hist[i]) end end
   local gx=margin+6;local gy=sy+16;local gw=sw-12;local gh=strip-24
   line(gx,gy+gh,gx+gw,gy+gh,border)
