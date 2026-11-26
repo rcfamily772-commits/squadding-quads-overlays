@@ -1,24 +1,24 @@
-# SQ Pilot Dash v1.7 — Velocity / Black Label Glass
+# SQ Pilot Dash v1.8 — Apex
 
-Formerly SQ Reactor. [Project page, four-layout browser demo and v1.7 ZIP](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/).
+[Interactive preview and download](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/) · [Design overview](design/apex-overview.png) · [Previous v1.7](v1.7/)
 
-## v1.7 Black Label Glass (experimental field preview)
-- Theme 6 has a sculpted glass-inspired cockpit with stepped bevels and highlights, lightning/current/RF/altitude pictograms, live LQ bars, a custom segmented timer, thicker illuminated speed ticks, and a trophy-styled gold peak rail.
-- Native V15 480×272 geometry retained; compact zones simplify graphics and smaller zones retain fallback. Browser CSS/SVG gradients are illustrative; radio uses LCD primitives without transparency, assets or animation.
-- No new sensors, settings or SD schema changes. Previous [v1.6](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.6/) is archived.
+A motorsport-inspired visual redesign of the actual EdgeTX widget. SQ identity throughout; no Red Bull or Formula 1 affiliation.
 
-## V15 landscape correction
-- Primary target: HelloRadioSky V15 Ultra, native 480×272 landscape, confirmed by LCD_W/LCD_H in the EdgeTX 2.12 V15 HAL: https://github.com/EdgeTX/edgetx/blob/2.12/radio/src/targets/hrs/v15/hal.h .
-- Reflow rather than stretch: three header modules, six telemetry pods, circular speed dial with equal pixel radii, full-width trace, gold peaks rail and footer. Timer moves to centre header.
-- Full layout reflows to actual widget zones at least 400×190 and aspect ratio ≥1.45, subject to minimum tile height; smaller/portrait zones use the previous adaptive fallback.
-- Browser preview uses a fixed 480×272 SVG viewBox with preserved aspect ratio; artwork is illustrative and firmware fonts may differ. Theme 6 selects Velocity.
-- Existing SD journal and telemetry features unchanged. [Archived v1.5](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.5/).
+## What changed
 
-## Velocity features
-- Theme 6 (default for new instances): blue glass-inspired bevelled instrument pods, large flight timer, central segmented speed dial, full-width rolling trace and a gold current/last-flight peaks rail.
-- Six total themes; themes 1–5 retain their earlier layout. Existing saved widget settings may retain the previous theme: set Theme=6 explicitly to activate Velocity. See v1.6 landscape requirements above.
-- The browser uses CSS gradients/glow; the actual radio uses lightweight LCD primitives and does not replicate the concept photograph pixel-for-pixel. No Oxbot firmware support is implied.
-- Existing log schema, demo storage key, four layouts and telemetry collection remain unchanged. Archived [v1.4](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.4/) remains available.
+- New Theme 6: near-black surfaces, warm white numerals, ice-blue live instruments and an amber frozen flight report.
+- Bespoke geometric speed digits, 24-segment speed strip, measured text fitting, six telemetry fields, central arm timer and speed trace, and a restrained peak/consumption rail.
+- Performance, Essentials, Battery and Logbook share one visual system. Themes 1–5 retain their classic rendering.
+- Explicit missing GPS and partial GPS report messages. Missing readings are not filled with invented zeroes. Values that cannot fit at the smallest font show `--` rather than truncated digits.
+- The web preview now executes the downloadable Lua **drawing code** in a bounded worker using the existing Fengari dependency. Its state is simulated, font metrics approximate, and it is not a firmware emulator or radio connection. History remains on the existing browser storage key.
+- No extra radio image/font files, decorative animation, sensors, widget settings or SD format changes. Telemetry sampling and flight/log bookkeeping are unchanged.
+- v1.7 remains archived with its own stylesheet, JavaScript and Lua source.
+
+## Display and install
+
+Main design target: 480×272 landscape, including V15 Ultra. Apex Performance reflows in landscape zones at least 360×210; the other three Apex pages can use 360×180. Aspect ratio must be at least 1.4. Smaller/portrait zones retain the compact/classic fallback, including 400×190 and 320×240.
+
+Select **Theme = 6** after installation; saved widget settings can retain an older theme. Download `SQ_Pilot_Dash_v1.8.zip`, extract to the SD card root and add SQDash to a large colour widget zone. Full details below. The website download button packages the same main.lua; the static ZIP also includes this README.
 
 ## Retained Flight Command features
 - Four selectable instrument layouts: Performance (32-segment dial, telemetry, rolling speed trace), Essentials (large readings), Battery Performance (pack voltage, minimum voltage, voltage drop from first armed sample, last armed voltage, current, observed capacity, electrical power), Logbook (per-model saved flights, accumulated arm time, best observed speed, duration and power; latest entries).
@@ -30,7 +30,7 @@ Formerly SQ Reactor. [Project page, four-layout browser demo and v1.7 ZIP](https
 ## Install
 Extract ZIP into SD card root (WIDGETS/SQDash/main.lua); restart and add SQDash to a large colour widget zone. **EdgeTX 2.11+ required** because eight widget options are used. Older firmware can use [v1.3](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.3/). [v1.1](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.1/) and Reactor v1.0 are preserved.
 
-Settings: ArmSrc = dedicated two-position arm AUX channel or matching logical switch; ArmHigh = positive means armed; Cells = verified pack cell count (0 disables average cell voltage); Theme = 1–6 (6 Velocity); MPH and Feet = independent unit choices; Layout = 1 Performance, 2 Essentials, 3 Battery, 4 Logbook; LogSD = off by default. Full-screen page or rotary/field navigation switches layouts when the arm source is disarmed. Logbook is hidden when arm state is unsafe/unknown. Use one instance per model to avoid duplicate entries. Test with propellers removed.
+Settings: ArmSrc = dedicated two-position arm AUX channel or matching logical switch; ArmHigh = positive means armed; Cells = verified pack cell count (0 disables average cell voltage); Theme = 1–6 (6 Apex); MPH and Feet = independent unit choices; Layout = 1 Performance, 2 Essentials, 3 Battery, 4 Logbook; LogSD = off by default. Full-screen page or rotary/field navigation switches layouts when the arm source is disarmed. Logbook is hidden when arm state is unsafe/unknown. Use one instance per model to avoid duplicate entries. Test with propellers removed.
 
 ## SD logbook
 Enable LogSD and select Logbook while disarmed. Wait for history to load before arming. A log is keyed by the EdgeTX model filename (not the display name), so reusing a model file shares history. If filename is unavailable/unsupported, storage is disabled. Files are in /LOGS/SQD_<model filename>.csv; /LOGS must exist. New or unreadable history is reported as such; read/write/open failures and capacity limits are reported in the logbook. At 256 KiB, archive the file manually with the radio off; the widget never truncates existing data. It retains eight recent rows in RAM and aggregates records from loaded rows. Re-arming before a pending write is ready can lose that entry. No guarantee against power loss or SD corruption. Back up the SD card. Logs are not flight-controller blackbox logs.
@@ -42,10 +42,21 @@ A dash denotes unavailable data. Partial rows are marked and excluded from aircr
 ## Telemetry and limitations
 Discover sensors and verify values, especially RxBt (can represent receiver supply, not aircraft pack). GPS speed and altitude require compatible telemetry. Power = sampled voltage × current; pack voltage drop is relative to the first armed voltage, not measured internal resistance or true transient sag. Observed arm time follows the configured radio source, not confirmed FC arm state. Speed average is a sample mean; missing/stale values omitted. Missing samples can hide extrema. Session-only bests survive re-arm, not reload; SD aircraft records survive restart if successfully saved. Never use as a safety instrument. Remove if radio performance suffers.
 
-## Validation
-v1.7 mocked browser checks passed: native view, live timer and power, trace, LQ bar state, feet/metres, frozen peaks, logbook retention, theme switch, unique IDs, fixed 480×272 viewBox and downloadable ZIP payload. Calculated geometry passed at 480×272, 460×232, 460×210 and 400×190; 320×240 uses fallback. No physical radio or actual browser rendering test was performed, and Pages deployment is unverified.
-v1.6 mocked browser tests passed: native view, 32 ticks, timer, power, trace, feet/metres, frozen peaks, logbook retention, legacy theme switch, unique IDs, 480×272 viewBox and ZIP payload. A geometry calculation mirroring the Lua layout passed at 480×272, 460×232, 460×210 and 400×190; 320×240 takes the fallback. This is not a Lua runtime, font-rendering or on-radio test. Live Pages deployment remains unverified.
-v1.5 mocked browser checks passed: default Velocity selection, live timer and wattage, feet/metres conversion, frozen peaks on disarm, legacy theme selection, logbook retention, unique HTML IDs and ZIP source payload. Lua rendering and radio performance remain untested on physical hardware.
-Prior v1.4 browser logic passed mocked DOM checks of feet/metres conversion, battery layout, logbook count, separate aircraft, persistence after reload and ZIP entry/payload. The Lua runtime, physical radio, SD I/O on hardware, actual browser rendering and live GitHub Pages deployment have not been verified. This remains a field preview.
+## Validation — v1.8
 
-References: https://luadoc.edgetx.org/2.11/api-reference/constants/widget-options/ ; https://luadoc.edgetx.org/2.11/overview/version-libraries/io-library/ ; https://luadoc.edgetx.org/2.11/api-reference/model/getinfo/ .
+Executed the actual Lua with a desktop LCD mock: arm gating, zero LQ, missing GPS, frozen peak report, independent speed/altitude conversion, disarmed-only layout switching, four Apex layouts at 480×272, 460×232, 460×210 and 800×480; fallback geometry at 400×190, 320×240, 320×480, 240×160, 160×100 and 80×64. Drawing budget stays below 500 primitives/frame in these checks. Text measurements are approximations, not firmware font validation.
+
+Browser inspection: worker-loaded Lua renderer, start/finish report, Battery and Logbook pages, retained local demo history after reload, unit controls, missing-speed toggle, 320×240 fallback and a 390px mobile iframe. Native and JavaScript syntax checks passed. Static ZIP payload and browser ZIP encoder checked against the current Lua bytes.
+
+Physical radio execution, radio CPU/memory use, actual firmware font metrics and hardware SD I/O remain unverified. This is an experimental field preview. Test with propellers removed before using the widget in flight.
+
+Reproduce the Lua checks from the repository root:
+
+```sh
+python sq-reactor/tests/run-lua.py
+python sq-reactor/tests/render-proof.py
+```
+
+Requires the Lua 5.4 shared library for the Python launcher (or run `lua sq-reactor/tests/apex.lua` directly with Lua 5.3+) and Pillow/DejaVu fonts for design proofs. The PNG proofs use actual recorded Lua drawing commands with approximate typography; they are not photographs of radio hardware.
+
+API references: [Widget options](https://luadoc.edgetx.org/2.11/api-reference/constants/widget-options/), [LCD text](https://luadoc.edgetx.org/2.11/api-reference/display-lcd/drawtext/), [text measurement](https://luadoc.edgetx.org/2.11/api-reference/display-lcd/sizetext/), [SD I/O](https://luadoc.edgetx.org/2.11/overview/version-libraries/io-library/).

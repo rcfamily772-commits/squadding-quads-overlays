@@ -1,4 +1,4 @@
--- SQ Pilot Dash v1.7 | Black Label | telemetry read-only, opt-in SD log, colour EdgeTX 2.11+
+-- SQ Pilot Dash v1.8 | Apex | telemetry read-only, opt-in SD log, colour EdgeTX 2.11+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
 local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,6,1,6},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,0}}
@@ -183,174 +183,151 @@ local function card(x,y,W,H,label,value,sub,c)
  txt(x+6,y+15,value,f,white)
  if H>=49 and sub then txt(x+6,y+H-14,sub,SMLSIZE,c) end
 end
--- Velocity: layered bevels, six compact instrument pods, large timer, trace and gold peak rail.
--- Uses integer LCD primitives only; no bitmaps, animations, file I/O or new sensors.
-local navy=rgb(7,17,27);local glass=rgb(12,31,44);local bevel=rgb(33,71,88)
-local cyan=rgb(35,221,250);local dimCyan=rgb(16,67,83);local bronze=rgb(71,53,24)
-local shine=rgb(40,83,108);local shade=rgb(12,24,36);local ice=rgb(110,202,232);local green=rgb(88,224,164)
-local function shell(x,y,W,H,c,inside)
- if W<12 or H<10 then return end
- local k=min(7,floor(H/3))
- rect(x+k,y,W-2*k,H,inside);rect(x,y+k,W,H-2*k,inside)
- -- Stepped corner fill and restrained glass highlight, no alpha/bitmap dependency.
- rect(x+2,y+2,W-4,H-4,inside)
- if H>=22 then
-  rect(x+k,y+3,W-2*k,max(2,floor(H/4)),inside==bronze and bronze or rgb(22,47,64))
-  line(x+k,y+2,x+W-k-1,y+2,inside==bronze and gold or shine)
-  line(x+k,y+H-3,x+W-k-1,y+H-3,shade)
+-- Apex: sparse instrument hierarchy. All drawing is local to the widget zone.
+-- Seven-segment numerals use LCD rectangles/triangles; no bitmap/font assets.
+local apexBg=rgb(8,12,16);local apexPanel=rgb(17,23,29);local apexLine=rgb(44,55,63)
+local apexWhite=rgb(241,244,239);local apexMuted=rgb(149,165,175)
+local apexBlue=rgb(98,218,231);local apexDim=rgb(29,57,64);local apexAmber=rgb(244,190,91)
+local apexDigits={"abcdef","bc","abdeg","abcdg","bcfg","acdfg","acdefg","abc","abcdefg","abcdfg"}
+local function measure(s,f)
+ if lcd.sizeText then return lcd.sizeText(s,f) end
+ return #s*7,14
+end
+local function textBox(x,y,W,H,s,c,align,big)
+ s=tostring(s)
+ local fonts=big and {XXLSIZE or DBLSIZE,DBLSIZE,MIDSIZE,SMLSIZE} or {MIDSIZE,SMLSIZE}
+ local f=SMLSIZE;local tw,th
+ for _,ff in ipairs(fonts) do tw,th=measure(s,ff);if tw<=W and th<=H then f=ff;break end end
+ tw,th=measure(s,f)
+ if tw>W then s="--";tw,th=measure(s,f) end
+ local xx=x;if align==CENTER then xx=x+floor(W/2) elseif align==RIGHT then xx=x+W end
+ txt(xx,y+max(0,floor((H-th)/2)),s,f+(align or 0),c)
+end
+local function caption(x,y,W,s,c,align)
+ local tw=measure(s,SMLSIZE)
+ while tw>W and #s>1 do s=s:sub(1,-2);tw=measure(s,SMLSIZE) end
+ txt(align==CENTER and x+floor(W/2) or (align==RIGHT and x+W or x),y,s,SMLSIZE+(align or 0),c or apexMuted)
+end
+local function numerals(cx,y,s,h,c)
+ local scale=h/48;local width=(#s*34-6)*scale;local x=cx-width/2
+ local function polygon(points)
+  local q={};for i=1,#points,2 do q[#q+1]=floor(x+points[i]*scale+.5);q[#q+1]=floor(y+points[i+1]*scale+.5) end
+  for i=3,#q-2,2 do lcd.drawFilledTriangle(q[1],q[2],q[i],q[i+1],q[i+2],q[i+3],c) end
  end
- line(x+k,y,x+W-k-1,y,c);line(x+k,y+H-1,x+W-k-1,y+H-1,c)
- line(x,y+k,x,y+H-k-1,c);line(x+W-1,y+k,x+W-1,y+H-k-1,c)
- line(x,y+k,x+k,y,c);line(x+W-k-1,y,x+W-1,y+k,c)
- line(x,y+H-k-1,x+k,y+H-1,c);line(x+W-k-1,y+H-1,x+W-1,y+H-k-1,c)
- if H>=18 then line(x+k+2,y+2,x+W-k-3,y+2,bevel) end
-end
-local function fit(x,y,v,f,c,maxW)
- if lcd.sizeText and lcd.sizeText(v,f)>maxW then f=SMLSIZE end
- txt(x,y,v,CENTER+f,c)
-end
-local function pod(x,y,W,H,label,value,c)
- shell(x,y,W,H,bevel,glass)
- txt(x+7,y+3,label,SMLSIZE,muted)
- local f=H>=41 and MIDSIZE or SMLSIZE
- if lcd.sizeText and lcd.sizeText(value,f)>W-14 then f=SMLSIZE end
- txt(x+7,y+15,value,f,white)
- if W>=95 and H>=37 then rect(x+W-10,y+7,3,3,c) end
-end
--- V15 native landscape: never scale horizontal and vertical coordinates independently.
--- Reflow to the actual widget zone; full view 480x272, reduced home zone >= 400x190.
-local digitSegments={"abcdef","bc","abdeg","abcdg","bcfg","acdfg","acdefg","abc","abcdefg","abcdfg"}
-local function digitalTimer(cx,y,value,c)
- local width=0
- for i=1,#value do width=width+(value:sub(i,i)==":" and 6 or 14) end
- local x=cx-floor(width/2)
- for i=1,#value do
-  local char=value:sub(i,i)
-  if char==":" then rect(x+1,y+5,2,2,c);rect(x+1,y+12,2,2,c);x=x+6
-  else
-   local n=tonumber(char);local seg=n and digitSegments[n+1] or ""
-   local shapes={{"a",2,0,8,2},{"b",10,2,2,6},{"c",10,10,2,6},{"d",2,16,8,2},{"e",0,10,2,6},{"f",0,2,2,6},{"g",2,8,8,2}}
-   for _,z in ipairs(shapes) do if seg:find(z[1],1,true) then rect(x+z[2],y+z[3],z[4],z[5],c) end end
-   x=x+14
-  end
+ local shapes={a={4,0,24,0,21,5,7,5},g={7,21,21,21,25,24,21,27,7,27,3,24},d={7,43,21,43,24,48,4,48},
+ b={23,6,28,2,28,21,23,24},c={23,26,28,29,28,46,23,42},e={0,29,5,26,5,42,0,46},f={0,2,5,6,5,24,0,21}}
+ for i=1,#s do
+  local ch=s:sub(i,i);local n=tonumber(ch);local segments=n and apexDigits[n+1] or "g"
+  for j=1,#segments do polygon(shapes[segments:sub(j,j)]) end
+  x=x+34*scale
  end
 end
-local function velocity(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration)
- if W<400 or H<190 or W/H<1.45 then return false end
- local accent=rep and gold or cyan
- local m=6;local g=5;local footer=14
- local header=H>=250 and 43 or 30
- local railH=H>=250 and 31 or 24
- local traceH=H>=250 and 33 or 25
- local railY=H-footer-railH
- local traceY=railY-g-traceH
- local y=header+g;local h=traceY-y-g
- local side=floor((W-2*m-2*g)*.29);local center=W-2*m-2*g-2*side
- local left=m;local right=W-m-side;local mid=m+side+g
- local cx=mid+floor(center/2);local cy=y+floor(h/2)
- local ph=floor((h-2*g)/3)
- if ph<22 or center<90 then return false end
- rect(0,0,W,H,bg)
- shell(m,3,side,header-4,bevel,navy)
- txt(m+7,6,"SQ / VELOCITY",SMLSIZE,accent)
- txt(m+7,header>=36 and 23 or 17,rep and "FLIGHT REPORT" or "BLACK LABEL",SMLSIZE,muted)
- shell(mid,3,center,header-4,rep and gold or dimCyan,navy)
- local timerLabel=rep and "LAST ARM TIME" or "ARM TIME"
- txt(cx,5,timerLabel,CENTER+SMLSIZE,accent)
- if header>=40 and #duration<=7 then digitalTimer(cx,19,duration,white) else fit(cx,16,duration,SMLSIZE,white,center-26) end
- if header>=40 then
-  line(mid+9,23,mid+18,14,gold);line(mid+9,23,mid+18,32,gold)
-  line(mid+center-10,23,mid+center-19,14,gold);line(mid+center-10,23,mid+center-19,32,gold)
- end
- shell(right,3,side,header-4,bevel,navy)
- fit(right+floor(side/2),6,status,SMLSIZE,w.armUnknown and red or accent,side-10)
- fit(right+floor(side/2),header>=36 and 20 or 17,"PACK "..(w.flights+(w.state=="FLIGHT" and 1 or 0)),SMLSIZE,muted,side-10)
- local function tile(x,i,label,value,kind)
-  local yy=y+i*(ph+g)
-  shell(x,yy,side,ph,bevel,glass)
-  if ph>=36 then
-   local ix=x+12;local iy=yy+floor(ph/2)
-   local iconColor=rep and gold or ice
-   if kind=="volt" or kind=="power" then
-    line(ix+3,iy-9,ix-3,iy,iconColor);line(ix-3,iy,ix+3,iy,iconColor);line(ix+3,iy,ix-2,iy+8,iconColor)
-   elseif kind=="amp" then
-    lcd.drawCircle(ix,iy,7,iconColor);txt(ix,iy-5,"A",CENTER+SMLSIZE,iconColor)
-   elseif kind=="alt" then
-    line(ix-8,iy+5,ix-1,iy-6,iconColor);line(ix-1,iy-6,ix+5,iy+5,iconColor);line(ix+2,iy-1,ix+8,iy+5,iconColor)
-   else
-    for j=0,3 do
-     local level=kind=="link" and d.lq and floor(d.lq*4/100+.5) or 0
-     local col=kind=="link" and (j<level and green or dimCyan) or iconColor
-     if kind=="link" then rect(ix-7+j*4,iy+5-(j+1)*3,2,(j+1)*3,col)
-     else line(ix-6+j*4,iy+5,ix-6+j*4,iy+3-j*2,col) end
-    end
-   end
-   txt(x+25,yy+3,label,SMLSIZE,muted)
-   local fl=MIDSIZE
-   if lcd.sizeText and lcd.sizeText(value,fl)>side-31 then fl=SMLSIZE end
-   txt(x+25,yy+15,value,fl,white)
-  else
-   txt(x+6,yy+floor((ph-12)/2),label,SMLSIZE,muted)
-   txt(x+side-6,yy+floor((ph-12)/2),value,RIGHT+SMLSIZE,white)
-  end
- end
- tile(left,0,rep and "MIN V" or "VOLT",fmt(d.volt,"%.2f V"),"volt")
- tile(left,1,rep and "MAX A" or "AMPS",fmt(d.amp,"%.1f A"),"amp")
- tile(left,2,rep and "MAX W" or "POWER",fmt(d.watts,"%.0f W"),"power")
- tile(right,0,rep and "MIN LQ" or "LINK",fmt(d.lq,"%.0f%%"),"link")
- tile(right,1,rep and "MIN RF" or "RSSI",fmt(d.rssi,"%.0f dBm"),"rssi")
- tile(right,2,rep and "MAX ALT" or "ALT",fmt(alt,"%.0f"..altUnit),"alt")
- shell(mid,y,center,h,bevel,navy)
- -- Equal pixel radii: circular dial, even in an inset widget zone.
- local r=floor(min((center-12)/2,(h-10)/2))
- local ratio=d.speed and min(1,max(0,d.speed/180)) or -1
- if r>=21 then
-  lcd.drawCircle(cx,cy,r,bevel)
-  if r>=36 then lcd.drawCircle(cx,cy,r-12,dimCyan) end
-  for i=0,31 do
-   local angle=(135+i*270/31)*math.pi/180
-   local ca,sa=math.cos(angle),math.sin(angle)
-   local col=i/31<=ratio and accent or dimCyan
-   local inner=r-(i%4==0 and 11 or 8)
-   for j=-1,1 do
-    local aa=angle+j*.022
-    line(cx+floor(inner*math.cos(aa)),cy+floor(inner*math.sin(aa)),cx+floor((r-2)*math.cos(aa)),cy+floor((r-2)*math.sin(aa)),col)
-   end
-  end
- end
- txt(cx,cy-(r>=46 and 31 or 25),rep and "PEAK SPEED" or "GPS SPEED",CENTER+SMLSIZE,muted)
- fit(cx,cy-13,fmt(sv,"%.0f"),r>=46 and DBLSIZE or MIDSIZE,white,center-22)
- txt(cx,cy+(r>=46 and 17 or 10),unit,CENTER+SMLSIZE,accent)
- shell(m,traceY,W-2*m,traceH,bevel,navy)
+local function apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
+ if W<360 or H<180 or W/H<1.4 or (page==1 and H<210) then return false end
+ local a=rep and apexAmber or apexBlue;local m=10;local gap=6
+ local rich=H>=245;local header=rich and 34 or 28
+ local footer=18;local smallH=select(2,measure("A",SMLSIZE))
+ rect(0,0,W,H,apexBg)
+ -- Brand and state share one calm header; model names are measured and clipped.
+ rect(m,7,25,18,a);txt(m+3,8,"SQ",SMLSIZE,apexBg)
+ local chip=min(154,floor(W*.34));local chipX=W-m-chip
+ caption(43,8,chipX-51,w.aircraft:upper(),apexWhite)
+ local sc=(w.armUnknown or not w.seenSafe) and red or a
+ rect(chipX,6,chip,20,rep and rgb(44,34,20) or apexPanel)
+ caption(chipX+4,8,chip-8,status,sc,CENTER)
+ line(m,header-1,W-m-1,header-1,apexLine)
+ local note=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / SAMPLE GAP" or (rep and w.speedMissing and "PARTIAL / GPS SAMPLES" or (not rep and not d.speed and "GPS SPEED UNAVAILABLE" or (w.mahReset and "mAh COUNTER RESET" or (w.mahPartial and "mAh PARTIAL" or (rep and w.logOn and w.logStatus or "APEX / V1.8"))))))
+ caption(m,H-footer+2,W-65,note,(w.armUnknown or w.gap or w.mahReset) and red or apexMuted)
+ caption(W-48,H-footer+2,38,page.." / 4",a,RIGHT)
  local sf=w.mph and .621371 or 1
- local hi=1;local have=false
- for i=1,#w.hist do if w.hist[i] then hi=max(hi,w.hist[i]);have=true end end
- txt(m+7,traceY+3,"SPEED TRACE",SMLSIZE,muted)
- txt(W-m-7,traceY+3,have and fmt(hi*sf,"%.0f").." "..unit or "--",RIGHT+SMLSIZE,muted)
- local gx=m+7;local gw=W-2*m-14;local gy=traceY+15;local gh=traceH-19
- for i=0,4 do local xx=gx+floor(i*gw/4);line(xx,gy,xx,gy+gh,border) end
- line(gx,gy+gh,gx+gw,gy+gh,border)
- for i=2,#w.hist do local aa,bb=w.hist[i-1],w.hist[i]
-  if aa and bb then line(gx+floor((i-2)*gw/35),gy+gh-floor(aa/hi*gh),gx+floor((i-1)*gw/35),gy+gh-floor(bb/hi*gh),accent) end
+ local function tile(x,y,tw,th,label,value,unitText,sub)
+  rect(x,y,tw,th,apexPanel);rect(x,y,2,th,apexLine)
+  local pad=tw>=120 and 9 or 7
+  caption(x+pad,y+3,tw-2*pad,label,apexMuted)
+  local valH=th-smallH-9
+  if sub and th>=65 then valH=valH-smallH end
+  local unitW=measure(unitText,SMLSIZE)
+  textBox(x+pad,y+smallH+4,tw-2*pad-unitW-4,valH,value,apexWhite,0,th>=65)
+  caption(x+tw-pad-unitW,y+th-smallH-4,unitW,unitText,a)
+  if sub and th>=65 then caption(x+pad,y+th-smallH-4,tw-2*pad-unitW-8,sub,apexMuted) end
  end
- shell(m,railY,W-2*m,railH,gold,bronze)
- local cut1=m+floor((W-2*m)*.22);local cut2=m+floor((W-2*m)*.61)
- local ps=w.stats.speed and w.stats.speed*sf or nil
- local pa=w.stats.alt and w.stats.alt*(w.feet and 3.28084 or 1) or nil
- local yy=railY+floor((railH-12)/2)
- if W>=440 then
-  line(m+9,yy+1,m+21,yy+1,gold);line(m+10,yy+2,m+14,yy+7,gold);line(m+20,yy+2,m+16,yy+7,gold);line(m+15,yy+7,m+15,yy+11,gold);line(m+11,yy+11,m+19,yy+11,gold)
-  txt(m+26,yy,"PEAKS",SMLSIZE,gold)
- else txt(m+8,yy,"PEAKS",SMLSIZE,gold) end
- line(cut1,railY+4,cut1,railY+railH-5,gold);line(cut2,railY+4,cut2,railY+railH-5,gold)
- txt(cut1+6,yy,"SPD",SMLSIZE,gold);txt(cut2-6,yy,fmt(ps,"%.0f").." "..unit,RIGHT+SMLSIZE,white)
- txt(cut2+6,yy,"ALT",SMLSIZE,gold);txt(W-m-7,yy,fmt(pa,"%.0f"..altUnit),RIGHT+SMLSIZE,white)
- local note=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / SAMPLE GAP" or (w.mahReset and "mAh RESET" or (rep and w.logOn and (w.logStatus=="SD FLIGHT SAVED" and "SD SAVED" or "SEE LOGBOOK") or "BLACK LABEL / V1.7")))
- txt(m,H-12,note,SMLSIZE,muted)
- local used=(rep or w.state=="FLIGHT") and w.stats.mah or nil
- txt(W-m,H-12,fmt(used,"%.0f mAh"),RIGHT+SMLSIZE,muted)
+ if page==1 then
+  -- 24 light segments encode speed only, on a fixed 0..180 km/h scale.
+  local ledY=header+5;local ledH=rich and 5 or 3;local ledGap=3
+  local ledW=(W-2*m-23*ledGap)/24
+  local ratio=d.speed and max(0,min(1,d.speed/180)) or 0
+  for i=0,23 do local x=m+floor(i*(ledW+ledGap));rect(x,ledY,floor(ledW),ledH,i<math.ceil(ratio*24) and a or apexDim) end
+  local y=ledY+ledH+7;local railH=rich and 42 or 31;local railY=H-footer-railH-4
+  local h=railY-y-gap;local side=floor((W-2*m)*.245);local center=W-2*m-2*side-2*gap
+  local mid=m+side+gap;local cx=mid+floor(center/2);local right=W-m-side
+  local th=floor((h-2*gap)/3)
+  if th<29 then return false end
+  tile(m,y,side,th,rep and "MIN PACK" or "PACK",fmt(d.volt,"%.2f"),"V")
+  tile(m,y+th+gap,side,th,rep and "PEAK AMPS" or "CURRENT",fmt(d.amp,"%.1f"),"A")
+  tile(m,y+2*(th+gap),side,th,rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f"),"W")
+  tile(right,y,side,th,rep and "MIN LINK" or "LINK",fmt(d.lq,"%.0f"),"%")
+  tile(right,y+th+gap,side,th,rep and "MIN RSSI" or "RSSI",fmt(d.rssi,"%.0f"),"dBm")
+  tile(right,y+2*(th+gap),side,th,rep and "MAX ALT" or "ALTITUDE",fmt(alt,"%.0f"),altUnit:gsub(" ",""))
+  caption(mid,y+1,center,rep and "PEAK GROUND SPEED" or "GPS GROUND SPEED",apexMuted,CENTER)
+  local digits=fmt(sv,"%03.0f");local nh=min(rich and 64 or 43,floor(h*.42),floor((center-18)*48/(#digits*34-6)))
+  local ny=y+smallH+8
+  numerals(cx,ny,digits,nh,apexWhite)
+  caption(mid,ny+nh+5,center,unit,a,CENTER)
+  -- A small central trace supports the number without competing with it.
+  if rich and h>=150 then
+   local gx=mid+12;local gw=center-24;local gy=ny+nh+smallH+14;local gh=max(6,h-(gy-y)-36)
+   line(gx,gy+gh,gx+gw,gy+gh,apexLine)
+   local hi=1;for i=1,#w.hist do if w.hist[i] then hi=max(hi,w.hist[i]) end end
+   for i=2,#w.hist do local aa,bb=w.hist[i-1],w.hist[i];if aa and bb then line(gx+floor((i-2)*gw/35),gy+gh-floor(aa/hi*gh),gx+floor((i-1)*gw/35),gy+gh-floor(bb/hi*gh),a) end end
+  end
+  local timerH=rich and 27 or 20
+  textBox(mid+65,y+h-timerH,center-68,timerH,duration,apexWhite,CENTER,false)
+  -- Arm time label shares the rail; units always remain attached to values.
+  local rw=floor((W-2*m-2*gap)/3)
+  local vals={{"PEAK SPEED",fmt(w.stats.speed and w.stats.speed*sf,"%.0f"),unit},{"PEAK ALT",fmt(w.stats.alt and w.stats.alt*(w.feet and 3.28084 or 1),"%.0f"),altUnit:gsub(" ","")},{"USED",fmt((rep or w.state=="FLIGHT") and w.stats.mah or nil,"%.0f"),"mAh"}}
+  for i,v in ipairs(vals) do
+   local x=m+(i-1)*(rw+gap);line(x,railY,x+rw-1,railY,rep and a or apexLine)
+   caption(x+3,railY+4,rw-6,v[1],rep and a or apexMuted)
+   local uh=measure(v[3],SMLSIZE)
+   textBox(x+3,railY+smallH+4,rw-uh-13,railH-smallH-5,v[2],apexWhite,0,false)
+   caption(x+rw-uh-3,railY+railH-smallH-1,uh,v[3],a)
+  end
+  -- Timer is explicitly labelled; radio arm input is not confirmed FC arming.
+  caption(mid+3,y+h-timerH+5,65,rich and "ARM TIME" or "ARM",apexMuted)
+ elseif page==2 or page==3 then
+  caption(m,header+5,W-2*m,page==2 and "ESSENTIALS" or "BATTERY / OBSERVED",a)
+  local y=header+smallH+12;local tw=floor((W-2*m-gap)/2);local th=floor((H-footer-y-2*gap-4)/3)
+  local values
+  if page==2 then values={{rep and "PEAK GROUND SPEED" or "GPS GROUND SPEED",fmt(sv,"%.0f"),unit},{rep and "MAX ALTITUDE" or "ALTITUDE",fmt(alt,"%.0f"),altUnit:gsub(" ","")},{rep and "MIN PACK" or "PACK VOLTAGE",fmt(d.volt,"%.2f"),"V"},{rep and "MIN LINK" or "LINK QUALITY",fmt(d.lq,"%.0f"),"%"},{"ARM TIME",duration,""},{rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f"),"W"}}
+  else
+   local sag=w.firstVolt and w.stats.volt and max(0,w.firstVolt-w.stats.volt) or nil
+   values={{rep and "MIN PACK" or "LIVE PACK",fmt(d.volt,"%.2f"),"V"},{rep and "LAST ARMED VOLT" or "MIN PACK",fmt(rep and w.endVolt or w.stats.volt,"%.2f"),"V"},{"DROP FROM FIRST",fmt(sag,"%.2f"),"V"},{rep and "PEAK CURRENT" or "CURRENT",fmt(d.amp,"%.1f"),"A"},{"OBSERVED CAPACITY",fmt((rep or w.state=="FLIGHT") and w.stats.mah or nil,"%.0f"),"mAh"},{rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f"),"W"}}
+  end
+  for i,v in ipairs(values) do tile(m+((i-1)%2)*(tw+gap),y+floor((i-1)/2)*(th+gap),tw,th,v[1],v[2],v[3]) end
+ else
+  caption(m,header+5,W-2*m,"AIRCRAFT LOGBOOK",a)
+  local y=header+smallH+12;local tw=floor((W-2*m-gap)/2);local th=rich and 51 or 40
+  tile(m,y,tw,th,"SAVED FLIGHTS",tostring(w.total),"")
+  tile(m+tw+gap,y,tw,th,"BEST GROUND SPEED",fmt(w.allSpeed and w.allSpeed*sf,"%.0f"),unit)
+  local yy=y+th+8
+  caption(m,yy,W-2*m,"TOTAL "..time(w.totalTime).."  /  PEAK "..fmt(w.allPower,"%.0f W"),apexMuted)
+  yy=yy+smallH+6
+  if #w.recent==0 then
+   caption(m,yy,W-2*m,w.logOn and "NO SAVED FLIGHTS" or "ENABLE LogSD TO SAVE FLIGHTS",apexWhite)
+  else
+   local rows=min(#w.recent,floor((H-footer-smallH-8-yy)/(smallH+7)))
+   for i=1,rows do
+    local r=w.recent[i];local yy2=yy+(i-1)*(smallH+7)
+    if i%2==1 then rect(m,yy2-1,W-2*m,smallH+5,apexPanel) end
+    caption(m+5,yy2,floor(W*.51),r.date:sub(1,16)..(r.partial and "*" or ""),apexWhite)
+    caption(floor(W*.54),yy2,floor(W*.46)-m-5,time(r.duration).." / "..fmt(r.speed and r.speed*sf,"%.0f").." "..unit,a,RIGHT)
+   end
+  end
+  caption(m,H-footer-smallH-5,W-2*m,w.logStatus,apexMuted)
+ end
  return true
 end
+
 local function refresh(w,event,touch)
  local W,H=w.zone.w,w.zone.h;if event~=nil then W,H=LCD_W,LCD_H end
  if W<1 or H<1 then return end
@@ -366,12 +343,12 @@ local function refresh(w,event,touch)
  local cell=voltage and fmt(voltage,"%.2f V/c") or "PACK"
  local duration=time(w.elapsed)
  local alt=d.alt and d.alt*(w.feet and 3.28084 or 1) or nil;local altUnit=w.feet and " ft" or " m"
- txt(6,3,"SQ / PILOT DASH  1.7",SMLSIZE,accent)
+ txt(6,3,"SQ / PILOT DASH  1.8",SMLSIZE,accent)
  if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
  line(6,17,W-7,17,border)
  local page=w.page
  if page==4 and not w.safeInput then page=1 end
- if page==1 and w.theme==6 and W>=400 and H>=190 and velocity(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration) then return end
+ if w.theme==6 and apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page) then return end
  if W>=300 and H>=175 and page~=1 then
   local cw=floor((W-21)/2);local h=floor((H-60)/3);local x=8;local x2=x+cw+5;local y=38
   local function c(i,label,value,sub) card(i%2==0 and x2 or x,y+floor((i-1)/2)*(h+4),cw,h,label,value,sub,accent) end
@@ -469,7 +446,7 @@ local function refresh(w,event,touch)
    txt(bx+5,sy+16,fmt(d.watts,"%.0f W").."  |  "..fmt(w.bestSpeed and w.bestSpeed*factor,"%.0f").." "..unit,SMLSIZE,white)
   end
  end
- local foot=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / ARM OR SAMPLE GAP" or (w.mahReset and "mAh COUNTER RESET" or (w.mahPartial and "mAh PARTIAL" or "BLACK LABEL / V1.7")))
+ local foot=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / ARM OR SAMPLE GAP" or (w.mahReset and "mAh COUNTER RESET" or (w.mahPartial and "mAh PARTIAL" or "APEX / V1.8")))
  txt(8,H-14,foot,SMLSIZE,w.gap and red or muted)
  if not w.gap and not w.armUnknown then txt(W-8,H-14,rep and (w.logOn and (w.logStatus=="SD FLIGHT SAVED" and "SAVED" or "SEE LOGBOOK") or "RE-ARM TO RESET") or "READ ONLY",RIGHT+SMLSIZE,muted) end
 end
