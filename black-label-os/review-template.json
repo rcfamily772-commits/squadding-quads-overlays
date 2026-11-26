@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "baseline": "v2.12.5",
+  "commit": "REPLACE WITH VERIFIED UPSTREAM COMMIT",
+  "reviewed": false,
+  "reviewer": "",
+  "files": [],
+  "notes": "No verified palette file mapping yet. Reviewer must supply exact path, file SHA-256 and edits [{key, exact_line, old_literal}]. No warning or logic edits. Template intentionally blocks compilation."
+}
