@@ -1,35 +1,30 @@
-# SQ Pilot Dash v1.3 — Black Label
+# SQ Pilot Dash v1.4 — Black Label Flight Command Edition
 
-**Formerly SQ Reactor.** The existing project has evolved from a decorative animated core into a read-only FPV telemetry dashboard. Reactor v1.0 remains available unchanged.
+Formerly SQ Reactor. [Project page, four-layout browser demo and v1.4 ZIP](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/).
 
-[Project page, interactive demo and v1.3 ZIP](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
+## v1.4 (experimental field preview)
+- Four selectable instrument layouts: Performance (32-segment dial, telemetry, rolling speed trace), Essentials (large readings), Battery Performance (pack voltage, minimum voltage, voltage drop from first armed sample, last armed voltage, current, observed capacity, electrical power), Logbook (per-model saved flights, accumulated arm time, best observed speed, duration and power; latest entries).
+- Independent MPH and Feet toggles. Stored speed remains km/h; altitude remains metres.
+- Gold-accented frozen last-flight report; five palettes. Read-only flight telemetry, no model or control writes.
+- Optional SD journal, one append after a confirmed radio arm-source disarm. No file I/O during observed armed state; loading is incremental when disarmed. One SQDash instance per model.
+- Browser demo has its own local-storage aircraft history, up to 500 rows per aircraft, CSV export, independent units and page tabs. Simulated data only; does not read the radio or sync with its SD journal.
 
-## v1.3 Performance Edition (field preview)
-- Layered instrument panels, 32-segment speed dial, estimated electrical power (sampled volts × amps), peak power on the debrief.
-- Up to 36 approximately one-second speed samples, frozen on disarm; trace uses an automatic scale and is displayed on large zones (400×230 or larger). Missing samples break the trace.
-- Sample mean GPS speed and completed-flight session speed records; records survive re-arm but not settings changes or widget reload. No SD writes. Session records are not certified personal records.
-- Original v1.1 available at [the archived page](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.1/).
+## Install
+Extract ZIP into SD card root (WIDGETS/SQDash/main.lua); restart and add SQDash to a large colour widget zone. **EdgeTX 2.11+ required** because eight widget options are used. Older firmware can use [v1.3](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.3/). [v1.1](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/v1.1/) and Reactor v1.0 are preserved.
 
-- Live GPS ground speed (km/h or mph), voltage, current, LQ, RSSI dBm, altitude, flight timer and observed mAh consumption.
-- Automatic last-flight view: sampled peak speed/current/altitude, minimum voltage/LQ and weakest RSSI; observed mAh delta and arm-input elapsed time.
-- Five palettes, segmented speed dial, compact zone layout, gold last-flight report.
-- Background sampling while widget is hidden (subject to EdgeTX scheduling); fresh/current sensor values only; physical units checked and converted.
-- Browser demo includes arm/disarm, throttle simulation, GPS loss, themes and downloadable ZIP assembled from the published Lua source.
+Settings: ArmSrc = dedicated two-position arm AUX channel or matching logical switch; ArmHigh = positive means armed; Cells = verified pack cell count (0 disables average cell voltage); Theme = 1–5; MPH and Feet = independent unit choices; Layout = 1 Performance, 2 Essentials, 3 Battery, 4 Logbook; LogSD = off by default. Full-screen page or rotary/field navigation switches layouts when the arm source is disarmed. Logbook is hidden when arm state is unsafe/unknown. Use one instance per model to avoid duplicate entries. Test with propellers removed.
 
-## Installation
-Extract the ZIP into your SD card root: WIDGETS/SQDash/main.lua. Restart EdgeTX and add SQDash to a large colour widget zone. Existing SQReact installations are unaffected.
+## SD logbook
+Enable LogSD and select Logbook while disarmed. Wait for history to load before arming. A log is keyed by the EdgeTX model filename (not the display name), so reusing a model file shares history. If filename is unavailable/unsupported, storage is disabled. Files are in /LOGS/SQD_<model filename>.csv; /LOGS must exist. New or unreadable history is reported as such; read/write/open failures and capacity limits are reported in the logbook. At 256 KiB, archive the file manually with the radio off; the widget never truncates existing data. It retains eight recent rows in RAM and aggregates records from loaded rows. Re-arming before a pending write is ready can lose that entry. No guarantee against power loss or SD corruption. Back up the SD card. Logs are not flight-controller blackbox logs.
 
-In widget settings:
-- ArmSrc: select a dedicated two-position arm source (prefer the arm AUX output channel or matching logical switch). Default unconfigured. Verify with propellers removed.
-- ArmHigh: on for positive armed input, off for negative armed input. Middle or unavailable input is unknown. The widget waits for an observed disarmed state before recording.
-- Cells: verified pack cell count, 0 disables calculated average voltage per cell.
-- Theme: 1–5; MPH: switch speed unit.
+CSV format (no header, blank lines permitted):
+SQ14,date_local,duration_s,peak_speed_kmh,avg_speed_kmh,max_alt_m,min_pack_v,peak_current_a,peak_power_w,observed_mah,min_lq_pct,min_rssi_dbm,last_armed_v,partial_flag,END
+A dash denotes unavailable data. Partial rows are marked and excluded from aircraft bests; GPS-less aircraft can still log arm time and other available values. Date uses radio RTC. The recent list shows as many rows as the display fits (up to eight loaded).
 
-Discover sensors and verify battery sensor corresponds to the aircraft pack (RxBt can represent receiver supply). GPS speed and altitude require appropriate compatible sensors. No values are invented when sensors are absent. Sampled extrema are not flight-controller blackbox maxima. Arm input is not verified FC arm status. Capacity is a delta from the first observed value; a reset invalidates it. Missing samples can hide peaks; report stays in RAM until re-arm, settings change or reload. Colour EdgeTX 2.8+ target, physical radio validation pending. Never rely on this widget for flight safety. No control, model or SD writes.
+## Telemetry and limitations
+Discover sensors and verify values, especially RxBt (can represent receiver supply, not aircraft pack). GPS speed and altitude require compatible telemetry. Power = sampled voltage × current; pack voltage drop is relative to the first armed voltage, not measured internal resistance or true transient sag. Observed arm time follows the configured radio source, not confirmed FC arm state. Speed average is a sample mean; missing/stale values omitted. Missing samples can hide extrema. Session-only bests survive re-arm, not reload; SD aircraft records survive restart if successfully saved. Never use as a safety instrument. Remove if radio performance suffers.
 
 ## Validation
-v1.3 browser JavaScript passed a mocked DOM test of live power, rolling trace, frozen debrief, first record, second-flight record retention, GPS loss, session reset and ZIP entry/payload. Physical radio testing remains pending. Actual browser rendering, EdgeTX Lua runtime, physical hardware and Pages deployment not verified by this check.
+v1.4 browser logic passed mocked DOM checks of feet/metres conversion, battery layout, logbook count, separate aircraft, persistence after reload and ZIP entry/payload. The Lua runtime, physical radio, SD I/O on hardware, actual browser rendering and live GitHub Pages deployment have not been verified. This remains a field preview.
 
-Original Reactor v1.0: SQ_Reactor_v1.0.zip and WIDGETS/SQReact/main.lua retained. Existing smoke.lua pertains to v1.0.
-
-API: https://luadoc.edgetx.org/latest/api-reference/sources/get-source-value/ and https://luadoc.edgetx.org/latest/api-overview/script-types/widget-scripts/
+References: https://luadoc.edgetx.org/2.11/api-reference/constants/widget-options/ ; https://luadoc.edgetx.org/2.11/overview/version-libraries/io-library/ ; https://luadoc.edgetx.org/2.11/api-reference/model/getinfo/ .
