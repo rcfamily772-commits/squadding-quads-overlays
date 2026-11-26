@@ -28,7 +28,16 @@ function alternate(d,report,mph){
 const extrema={watts:Math.max,speed:Math.max,volt:Math.min,amp:Math.max,lq:Math.min,rssi:Math.min,alt:Math.max,mah:Math.max};
 const fmt=(v,d=0,s="")=>v==null?"—":v.toFixed(d)+s;
 function render(){const report=mode==="report",d=report?stats:live, mph=$("units").value==="mph";
-dash.classList.toggle("report",report);dash.style.setProperty("--glow",report?"#ebc16d":$("palette").value);
+dash.classList.toggle("report",report);
+const velocity=$("palette").value==="#23ddfa";dash.classList.toggle("velocity",velocity);
+$("dashbrand").textContent=velocity?"SQ / VELOCITY":"SQ / PILOT DASH";
+$("heroTimerLabel").textContent=report?"LAST FLIGHT / ARM TIME":"FLIGHT TIME";$("heroTimer").textContent=duration(elapsed);
+$("vPowerLabel").textContent=report?"PEAK POWER":"POWER";$("vPower").textContent=fmt(d.watts,0," W");
+$("vAltLabel").textContent=report?"MAX ALT":"ALTITUDE";$("vAlt").textContent=fmt(altitude(d.alt),0," "+$("altUnits").value);
+$("peakSpeed").textContent=fmt(stats.speed==null?null:stats.speed*(mph?.621371:1),0,mph?" mph":" km/h");
+$("peakAlt").textContent=fmt(altitude(stats.alt),0," "+$("altUnits").value);
+$("footerRight").textContent=velocity&&page===1?fmt(d.mah,0," mAh"):"READ ONLY";
+dash.style.setProperty("--glow",report?"#ebc16d":$("palette").value);
 $("state").textContent=report?"LAST FLIGHT":mode==="flight"?"ARM INPUT ON":"STANDBY";
 for(const [id,a,b] of [["speedLabel","GPS SPEED","PEAK SPEED"],["voltLabel","PACK VOLTAGE","MIN PACK"],["ampLabel","CURRENT","PEAK CURRENT"],["lqLabel","LINK QUALITY","MIN LINK"],["rssiLabel","RSSI dBm","WEAKEST RSSI"],["altLabel","ALTITUDE","MAX ALT"]])$(id).textContent=report?b:a;
 $("speed").textContent=fmt(d.speed==null?null:d.speed*(mph?.621371:1));$("speedUnit").textContent=mph?"mph":"km/h";
@@ -42,7 +51,7 @@ $("recordLabel").textContent=report&&newBest?"NEW SESSION BEST":"SESSION RECORDS
 const maxSpeed=Math.max(1,...history.filter(v=>v!=null));let p="",prev=false;
 history.forEach((v,i)=>{if(v==null){prev=false;return;}p+=(prev?"L":"M")+(i*320/35).toFixed(1)+" "+(61-v/maxSpeed*53).toFixed(1)+" ";prev=true;});$("trace").setAttribute("d",p);
 $("time").textContent=String(Math.floor(elapsed/60)).padStart(2,"0")+":"+String(Math.floor(elapsed%60)).padStart(2,"0");
-$("foot").textContent=report?"REPORT FROZEN / RE-ARM TO RESET":$("missing").checked?"GPS DATA UNAVAILABLE":"BLACK LABEL / V1.4";
+$("foot").textContent=report?"REPORT FROZEN / RE-ARM TO RESET":$("missing").checked?"GPS DATA UNAVAILABLE":"BLACK LABEL / V1.5";
 $("arm").disabled=mode==="flight";$("disarm").disabled=mode!=="flight";$("aircraft").disabled=mode==="flight";alternate(d,report,mph);}
 function sample(now){if(mode!=="flight")return;let dt=Math.min(.5,Math.max(0,(now-last)/1000));last=now;elapsed=(now-start)/1000;let t=+$("throttle").value/100;
 let speed=Math.max(0,t*165+Math.sin(elapsed*1.1)*t*11),amp=t*96+Math.max(0,Math.sin(elapsed*2))*t*9;used+=amp*dt/3.6;
@@ -65,5 +74,5 @@ const u16=x=>{v.setUint16(p,x,true);p+=2;},u32=x=>{v.setUint32(p,x,true);p+=4;},
 u32(0x04034b50);u16(20);u16(0);u16(0);u16(0);u16(0x21);u32(crc);u32(bytes.length);u32(bytes.length);u16(n.length);u16(0);put(n);put(bytes);
 const cd=p;u32(0x02014b50);u16(20);u16(20);u16(0);u16(0);u16(0);u16(0x21);u32(crc);u32(bytes.length);u32(bytes.length);u16(n.length);u16(0);u16(0);u16(0);u16(0);u32(0);u32(0);put(n);
 const size=p-cd;u32(0x06054b50);u16(0);u16(0);u16(1);u16(1);u32(size);u32(cd);u16(0);return a;}
-$("download").onclick=async()=>{const b=$("download"),s=$("downloadstatus");b.disabled=true;s.textContent="Preparing ZIP…";try{const r=await fetch("WIDGETS/SQDash/main.lua",{cache:"no-cache"});if(!r.ok)throw Error("Source unavailable");const data=new Uint8Array(await r.arrayBuffer());if(!new TextDecoder().decode(data).startsWith("-- SQ Pilot Dash v1.4"))throw Error("Unexpected source");const url=URL.createObjectURL(new Blob([zip("WIDGETS/SQDash/main.lua",data)],{type:"application/zip"}));const a=document.createElement("a");a.href=url;a.download="SQ_Pilot_Dash_v1.4.zip";a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);s.textContent="ZIP prepared. Extract to the SD card root.";}catch(e){s.textContent="ZIP unavailable. Use the Lua source link above.";}finally{b.disabled=false;}};
+$("download").onclick=async()=>{const b=$("download"),s=$("downloadstatus");b.disabled=true;s.textContent="Preparing ZIP…";try{const r=await fetch("WIDGETS/SQDash/main.lua",{cache:"no-cache"});if(!r.ok)throw Error("Source unavailable");const data=new Uint8Array(await r.arrayBuffer());if(!new TextDecoder().decode(data).startsWith("-- SQ Pilot Dash v1.5"))throw Error("Unexpected source");const url=URL.createObjectURL(new Blob([zip("WIDGETS/SQDash/main.lua",data)],{type:"application/zip"}));const a=document.createElement("a");a.href=url;a.download="SQ_Pilot_Dash_v1.5.zip";a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);s.textContent="ZIP prepared. Extract to the SD card root.";}catch(e){s.textContent="ZIP unavailable. Use the Lua source link above.";}finally{b.disabled=false;}};
 })();
