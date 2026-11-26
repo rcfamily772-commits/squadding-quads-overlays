@@ -219,6 +219,22 @@ local function pod(x,y,W,H,label,value,c)
 end
 -- V15 native landscape: never scale horizontal and vertical coordinates independently.
 -- Reflow to the actual widget zone; full view 480x272, reduced home zone >= 400x190.
+local digitSegments={"abcdef","bc","abdeg","abcdg","bcfg","acdfg","acdefg","abc","abcdefg","abcdfg"}
+local function digitalTimer(cx,y,value,c)
+ local width=0
+ for i=1,#value do width=width+(value:sub(i,i)==":" and 6 or 14) end
+ local x=cx-floor(width/2)
+ for i=1,#value do
+  local char=value:sub(i,i)
+  if char==":" then rect(x+1,y+5,2,2,c);rect(x+1,y+12,2,2,c);x=x+6
+  else
+   local n=tonumber(char);local seg=n and digitSegments[n+1] or ""
+   local shapes={{"a",2,0,8,2},{"b",10,2,2,6},{"c",10,10,2,6},{"d",2,16,8,2},{"e",0,10,2,6},{"f",0,2,2,6},{"g",2,8,8,2}}
+   for _,z in ipairs(shapes) do if seg:find(z[1],1,true) then rect(x+z[2],y+z[3],z[4],z[5],c) end end
+   x=x+14
+  end
+ end
+end
 local function velocity(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration)
  if W<400 or H<190 or W/H<1.45 then return false end
  local accent=rep and gold or cyan
@@ -241,7 +257,7 @@ local function velocity(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration)
  shell(mid,3,center,header-4,rep and gold or dimCyan,navy)
  local timerLabel=rep and "LAST ARM TIME" or "ARM TIME"
  txt(cx,5,timerLabel,CENTER+SMLSIZE,accent)
- fit(cx,header>=40 and 15 or 16,duration,header>=40 and DBLSIZE or SMLSIZE,white,center-26)
+ if header>=40 and #duration<=7 then digitalTimer(cx,19,duration,white) else fit(cx,16,duration,SMLSIZE,white,center-26) end
  if header>=40 then
   line(mid+9,23,mid+18,14,gold);line(mid+9,23,mid+18,32,gold)
   line(mid+center-10,23,mid+center-19,14,gold);line(mid+center-10,23,mid+center-19,32,gold)
