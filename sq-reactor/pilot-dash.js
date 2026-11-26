@@ -26,7 +26,7 @@ function paint(cmd){
  if(op==='drawCircle'||op==='drawFilledCircle'){const [x,y,r,c]=v;ctx.fillStyle=ctx.strokeStyle=colour(c);ctx.beginPath();ctx.arc(x,y,r,0,2*Math.PI);if(op==='drawCircle')ctx.stroke();else ctx.fill();return;}
  const [x,y,w,h,c]=v;ctx.fillStyle=ctx.strokeStyle=colour(c);if(op==='drawRectangle')ctx.strokeRect(x+.5,y+.5,w-1,h-1);else ctx.fillRect(x,y,w,h);
 }
-function fail(message){engineFailed=true;busy=false;clearTimeout(deadline);worker?.terminate();$('engine').textContent='Preview unavailable — '+message;$('engine').classList.add('error');$('arm').disabled=true;}
+function fail(message){engineFailed=true;busy=false;$('proof').hidden=false;canvas.hidden=true;$('modeLabel').textContent='Performance · design preview';clearTimeout(deadline);worker?.terminate();$('engine').textContent='Preview unavailable — '+message;$('engine').classList.add('error');$('arm').disabled=true;}
 function send(snapshot){
  if(!worker||engineFailed)return;
  if(busy){queued=snapshot;return;}
@@ -37,7 +37,7 @@ function render(){
  const report=mode==='report',rows=rowsFor(name()),valid=rows.filter(r=>r&&Number.isFinite(r.duration));
  const complete=valid.filter(r=>!r.partial),maxOf=k=>{const a=complete.map(r=>r[k]).filter(Number.isFinite);return a.length?Math.max(...a):null;};
  const [width,height]=$('size').value.split('x').map(Number);
- const theme=+$('palette').value,colors=['43daff','63ea9a','ff6f4b','e5be6b','bb89ff','62dae7'],hex=colors[theme-1];
+ const theme=+$('palette').value,colors=['43daff','63ea9a','ff6f4b','e5be6b','bb89ff','62dae7','d8b782'],hex=colors[theme-1];
  if(page===4&&mode==='flight')page=1;
  const snap={width,height,theme,mph:$('units').value==='mph',feet:$('altUnits').value==='ft',page,aircraft:name(),state:report?'REPORT':mode==='flight'?'FLIGHT':'READY',elapsed,flights:packs,newBest,bestSpeed:best,bestTime:null,bestAmp:null,firstVolt,endVolt,
   total:valid.length,totalTime:valid.reduce((t,r)=>t+r.duration,0),allSpeed:maxOf('speed'),allPower:maxOf('watts'),allTime:maxOf('duration'),logStatus:storeOK?'LOCAL DEMO HISTORY':'MEMORY ONLY / STORAGE UNAVAILABLE',gap:false,speedMissing:gpsMissing,armUnknown:false,seenSafe:true,safeInput:mode!=='flight',r:parseInt(hex.slice(0,2),16),g:parseInt(hex.slice(2,4),16),b:parseInt(hex.slice(4,6),16),
@@ -54,14 +54,14 @@ function render(){
 async function init(){
  try{
   [source,adapter]=await Promise.all(['WIDGETS/SQDash/main.lua','preview-runtime.lua'].map(async u=>{const r=await fetch(u,{cache:'no-cache'});if(!r.ok)throw Error('could not load renderer');return r.text();}));
-  worker=new Worker('preview-worker.js?v=1.8');
+  worker=new Worker('preview-worker.js?v=1.8.1');
   worker.onerror=e=>fail(e.message||'worker error');
   worker.onmessage=({data})=>{
    clearTimeout(deadline);busy=false;if(data.error){fail(data.error);return;}
    try{
     const bg=data.commands.find(c=>c[0]==='drawFilledRectangle'&&c[1]===0&&c[2]===0);
     if(bg&&(canvas.width!==bg[3]||canvas.height!==bg[4])){canvas.width=bg[3];canvas.height=bg[4];}
-    ctx.clearRect(0,0,canvas.width,canvas.height);data.commands.forEach(paint);
+    ctx.clearRect(0,0,canvas.width,canvas.height);data.commands.forEach(paint);canvas.hidden=false;$('proof').hidden=true;
     $('engine').textContent='Actual Lua renderer · browser fonts approximate';canvas.dataset.frame=String(data.id);
     $('arm').disabled=mode==='flight';
    }catch(e){fail(e.message);return;}
@@ -77,7 +77,7 @@ live.watts=live.volt*live.amp;if(firstVolt==null)firstVolt=live.volt;endVolt=liv
 for(const k in extrema)if(live[k]!=null)stats[k]=stats[k]==null?live[k]:extrema[k](stats[k],live[k]);}
 $("arm").onclick=()=>{mode="flight";flightAircraft=name();firstVolt=endVolt=null;gpsMissing=false;stats={};history=[];histAt=-Infinity;speedSum=speedN=0;newBest=false;used=0;elapsed=0;start=last=performance.now();sample(start);render();};
 $("disarm").onclick=()=>{sample(performance.now());mode="report";packs++;newBest=stats.speed!=null&&(best==null||stats.speed>best);if(newBest)best=stats.speed;saveDemo();render();};
-$("reset").onclick=()=>{mode="ready";firstVolt=endVolt=null;stats={};history=[];histAt=-Infinity;speedSum=speedN=0;best=null;packs=0;newBest=false;used=elapsed=0;live={speed:0,volt:25.2,amp:0,lq:100,rssi:-52,alt:0,mah:null};render();};
+$("reset").onclick=()=>{mode="ready";firstVolt=endVolt=null;stats={};history=[];histAt=-Infinity;gpsMissing=false;speedSum=speedN=0;best=null;packs=0;newBest=false;used=elapsed=0;live={speed:$("missing").checked?null:0,volt:25.2,amp:0,lq:100,rssi:-52,alt:0,mah:null};render();};
 for(const id of ["palette","units","altUnits","missing","aircraft"])$(id).onchange=()=>{if(mode==="ready")live.speed=$("missing").checked?null:0;render();};
 
 for(const b of document.querySelectorAll('[data-page]'))b.onclick=()=>{if(mode==='flight')return;page=+b.dataset.page;render();};
@@ -85,12 +85,4 @@ $('size').onchange=render;$('throttle').oninput=()=>{$('throttleValue').textCont
 $('exportLog').onclick=()=>{const fields=['date','duration','speed','avg','alt','volt','amp','watts','mah','lq','rssi','endV','partial'];const csv=fields.join(',')+'\n'+rowsFor(name()).map(r=>fields.map(k=>r[k]??'').join(',')).join('\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='SQ_Pilot_Dash_demo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
 setInterval(()=>{if(mode==='flight'){sample(performance.now());render();}},200);
 init();
-// Standard uncompressed ZIP; generated from the same published Lua source.
-function zip(name,bytes){const n=new TextEncoder().encode(name);let crc=0xffffffff;for(const b of bytes){crc^=b;for(let j=0;j<8;j++)crc=(crc>>>1)^((crc&1)?0xedb88320:0);}crc=(crc^0xffffffff)>>>0;
-const a=new Uint8Array(30+n.length+bytes.length+46+n.length+22),v=new DataView(a.buffer);let p=0;
-const u16=x=>{v.setUint16(p,x,true);p+=2;},u32=x=>{v.setUint32(p,x,true);p+=4;},put=x=>{a.set(x,p);p+=x.length;};
-u32(0x04034b50);u16(20);u16(0);u16(0);u16(0);u16(0x21);u32(crc);u32(bytes.length);u32(bytes.length);u16(n.length);u16(0);put(n);put(bytes);
-const cd=p;u32(0x02014b50);u16(20);u16(20);u16(0);u16(0);u16(0);u16(0x21);u32(crc);u32(bytes.length);u32(bytes.length);u16(n.length);u16(0);u16(0);u16(0);u16(0);u32(0);u32(0);put(n);
-const size=p-cd;u32(0x06054b50);u16(0);u16(0);u16(1);u16(1);u32(size);u32(cd);u16(0);return a;}
-$("download").onclick=async()=>{const b=$("download"),s=$("downloadstatus");b.disabled=true;s.textContent="Preparing ZIP…";try{const r=await fetch("WIDGETS/SQDash/main.lua",{cache:"no-cache"});if(!r.ok)throw Error("Source unavailable");const data=new Uint8Array(await r.arrayBuffer());if(!new TextDecoder().decode(data).startsWith("-- SQ Pilot Dash v1.8"))throw Error("Unexpected source");const url=URL.createObjectURL(new Blob([zip("WIDGETS/SQDash/main.lua",data)],{type:"application/zip"}));const a=document.createElement("a");a.href=url;a.download="SQ_Pilot_Dash_v1.8.zip";a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);s.textContent="ZIP prepared. Extract to the SD card root.";}catch(e){s.textContent="ZIP unavailable. Use the Lua source link above.";}finally{b.disabled=false;}};
 })();

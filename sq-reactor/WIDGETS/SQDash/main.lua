@@ -1,8 +1,8 @@
--- SQ Pilot Dash v1.8 | Apex | telemetry read-only, opt-in SD log, colour EdgeTX 2.11+
+-- SQ Pilot Dash v1.8.1 | Apex Nocturne | telemetry read-only, opt-in SD log, colour EdgeTX 2.11+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
-local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,6,1,6},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,0}}
-local palettes={{67,218,255},{99,234,154},{255,111,75},{229,190,107},{187,137,255},{35,221,250}}
+local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,7,1,7},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,0}}
+local palettes={{67,218,255},{99,234,154},{255,111,75},{229,190,107},{187,137,255},{35,221,250},{216,183,130}}
 local bg=rgb(5,10,17);local panel=rgb(12,22,32);local border=rgb(35,53,66)
 local white=rgb(234,244,250);local muted=rgb(139,163,180);local gold=rgb(235,193,109);local red=rgb(255,107,89)
 local function clamp(v,a,b,d) if type(v)~="number" or v~=v then return d end return max(a,min(b,floor(v))) end
@@ -164,7 +164,7 @@ end
 local function update(w,o)
  if w.reader then close(w.reader);w.reader=nil end
  o=o or {};w.armSrc=clamp(o.ArmSrc,0,65535,0);w.high=o.ArmHigh==nil or o.ArmHigh==1 or o.ArmHigh==true
- w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,6,6);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==1 or o.LogSD==true
+ w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,7,7);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==1 or o.LogSD==true
  local p=palettes[w.theme];w.accent=rgb(p[1],p[2],p[3]);w.dim=rgb(floor(p[1]*.22),floor(p[2]*.22),floor(p[3]*.22))
  w.state="SETUP";w.seenSafe=false;w.armUnknown=true;w.stats={};w.data={};w.elapsed=0;w.last=nil;w.resolved=nil;w.prevMah=nil;w.mahPartial=false;w.hist={};w.histAt=nil;w.flights=0;w.bestSpeed=nil;w.bestTime=nil;w.bestAmp=nil;w.newBest=false
  w.recent={};w.total=0;w.totalTime=0;w.allSpeed=nil;w.allTime=nil;w.allPower=nil;w.bytes=0;w.buffer="";w.loaded=false;w.readStarted=false;w.logBlocked=false;w.pending=nil;w.logPath=nil;w.safeInput=false;w.logStatus=w.logOn and "WAIT DISARM / LOAD SD" or "SD LOG OFF";w.aircraft="Aircraft";modelId(w);if w.logOn and not w.logPath then w.logStatus="SD MODEL ID UNAVAILABLE" end
@@ -328,11 +328,266 @@ local function apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
  return true
 end
 
+-- Original Nocturne numeral outlines, triangulated at build time.
+local figures = {
+  { [===[4(3$0&2.+*)./A'5%D1Y&Q+\/`/O6a8c8a@XB`G\IXCEKQMBC&A-G*?'@$6&:#05>^?bL53_C72b<`:%<%BQ]===], [===[$%&'()*+,-./-/0,1*2345675789:;<=>?<@%ABC)+1,..-16DE>=FC+*G-0HF=)C'IG0('&GI2&'$32I%$AJ43BAKEJ3LBKEDJBL@65D@L?M58<?=:M8FH;M:99;H]===] },
+  { [===[4+*36/4`*a*cB`KcKa@#=#)0@^6^]===], [===[$%&'()*+,&-.%$/+').$&+*'-&00'*0&1'01]===] },
+  { [===[&4'7)925.90722+YIcCYGVLRJRL6B5J<L3A,I*D%?(@$9&4$5'/-)*'/?=K./+/&%c1(%_5MDC:#=']===], [===[$%&'()('*+,-./0123214567879:;<=>?*?$($&?*=/.,@3265A>BC(*$,.->=B,+DECBD+FCE;GF+;E<HG+;:IH@GJI:3@HIJ9A249J82A5785]===] },
+  { [===[*++00)<C2@1C-R2Y2V0T'U*R(S&X/^'[)^,`0b5a:c:aKYBZH]CSMTAHIFFD@FABK3B3I9B/K/A+J+F&='B$=#.'3$(/:?C`?;4'7&<A8#1_4c=`D=@]=>LLCN]===], [===[$%&'()*+,,-*./0/.1234256789:;<=:>?@ABACDEFGDHIJKLMNO&P&O$%$Q('R/+*+/1245<;S?ABTFEIKMUP&VPUW'B3+1BCWPVX+32XVN26YNVLZY6IMLYZ7JIG87ZJGH[98DGES[8FT\[S]^\TS;]\^W:=;W^R_=>'WR=_``@?@`_]===] },
+  { [===[(M$N$R;1;R9`2a2cF`LcLaDMLRMMD#@#;MDR;_D^]===], [===[$%&%$'($&)*+,-./01'23%'3$(4-)+0/52'/,)-4/'),6/456,7(54(675(7]===] },
+  { [===[-?)C,D+R2W.R1T&V(S&Y/^'\*_3a/b7c@]=bE^CTKWMQCJLHIB>BB><</B3=H%I-M$L#1\;@7</-5@-%:a=_AF]===], [===[$%&'()(*)+','+-./0123456789:;<=>?@A$BCDDEB(-F('-.02;:9G?HCBI/F-AJHIBKF/.%IK21.I%$L13$&@5L3A@JL5MHJG54M?G=746N>=876>N<79:<N:]===] },
+  { [===[E&J&D#8)7%0)4.-,24)3&=/I%B&P0a1Z+]3^3b;a9cBaA[G^KWCRMQLH>@F>?;<?8;2C3>/BI(<'@BIA6@@&?#BG0T>_(W7a]===], [===[$%&'()*)+,-./01234526789:;<=>?@ABCBDEFGG/E%$H('IG.0253=<>AJKLFEM$&FLDNM&DLCMNIBC@(INA@J)*'OKJ,*+KO?-,+?O=,.G<=:0/G;:9P/19:QRP19Q7PR3S8743R8S6S56]===] },
+  { [===[+0%6'6;U5O2Y/c9bF-M'M$($/->ID8]===], [===[$%&'())*+,-.%$/)+'/$0('1,/02(1/,.(2,-,2]===] },
+  { [===[2(2$+(/0(-'203'6):28->'L-L+G+R+X&X(\-[+_1_5c6a?_>bF_EWKZMUCPMNJI4D?@<?K3E4I8E/J,C*H)E&>%A$:#0+/H%RESC8B(7<2B6%AM/b<aC\E<@<ED]===], [===[$%&'()*+,-,.)*'/010/234565789:;<=>?@ABCDEFGHIJGKLMNOPQ*)+(R&,-*S10T2/243BU@VIHWNPR('X-.1SY42T&R$YX.YSD563Z%$DXYED[867%ZQXDF\87QZOC[A98\WPO]:9NWL<]9JML<;]MJK^;=GJH?^=IV_^?>`_V>@U_`EBAUE`Fa[CE[a]===] },
+  { [===[,_'_.b:];aB]>XEZ@RLICDC=MDL6B%?(E'<#1+3$+(/4'/%50?&>)E2D,H6G1J8K@C>H(]6`3cA,0`4'4F7%<F;%ISI,B2]===], [===[$%&'()*)+,-./012343256789:;<=>?>@=<9ABCDE.%$F(GH.-0I43=9;:68>?<J$&6:9B?@HJ&76K?BLJHG7KMLBA('G7M5NAC)*'5MOENC,*+5O3NEDP,+4IQ/D.-,PRQI0/.QR1R/1]===] },
+}
+
+-- Nocturne uses warm metal only for instrument marks. Error text has its own ink.
+local noir = {
+  black=rgb(16,14,15), field=rgb(26,23,24), ivory=rgb(248,239,221),
+  gilt=rgb(216,183,130), soft=rgb(192,178,164), rule=rgb(77,65,62),
+  wine=rgb(76,28,41), rose=rgb(255,148,139),
+}
+
+-- A cut lapel forms the SQ Apex hallmark; the same mark appears on the case.
+local function hallmark(x,y,c)
+  lcd.drawFilledTriangle(x,y+18,x+11,y,x+8,y+13,c)
+  lcd.drawFilledTriangle(x+12,y+2,x+18,y+18,x+13,y+15,c)
+  line(x+3,y+17,x+14,y+11,c)
+end
+
+-- The two packed strings hold x/y vertex pairs and triangle vertex indices.
+-- ASCII 35 represents zero. Only integer coordinates reach the LCD driver.
+local function dialFigures(x,y,h,value)
+  local scale=h/64
+  local advance=floor(49*scale+.5)
+  for i=1,#value do
+    local digit=tonumber(value:sub(i,i))
+    local glyph=digit and figures[digit+1]
+    if glyph then
+      local points,faces=glyph[1],glyph[2]
+      local function point(v)
+        local offset=(v-36)*2+1
+        local px,py=points:byte(offset,offset+1)
+        return x+floor((px-35)*scale+.5),y+floor((py-35)*scale+.5)
+      end
+      for j=1,#faces,3 do
+        local a,b,c=faces:byte(j,j+2)
+        local ax,ay=point(a)
+        local bx,by=point(b)
+        local cx,cy=point(c)
+        lcd.drawFilledTriangle(ax,ay,bx,by,cx,cy,noir.ivory)
+      end
+    else
+      rect(x+floor(h*.10),y+floor(h*.52),max(3,floor(h*.42)),max(2,floor(h*.055)),noir.soft)
+    end
+    x=x+advance
+  end
+end
+
+local function field(x,y,W,H,label,value,unit,big)
+  local labelH=select(2,measure("A",SMLSIZE))
+  caption(x,y,W,label,noir.soft)
+  local unitW=measure(unit,SMLSIZE)
+  local gap=unitW>0 and 4 or 0
+  local room=W-unitW-gap
+  local top=y+labelH+2
+  local f=big and DBLSIZE or MIDSIZE
+  local tw,th=measure(value,f)
+  if th>H-labelH-2 or tw>room then f=MIDSIZE;tw,th=measure(value,f) end
+  if th>H-labelH-2 or tw>room then f=SMLSIZE;tw,th=measure(value,f) end
+  if tw>room then value="--";tw=measure(value,f) end
+  txt(x,top,value,f,noir.ivory)
+  if unitW>0 then txt(x+tw+gap,top+max(0,th-labelH-1),unit,SMLSIZE,noir.gilt) end
+end
+
+local function trace(w,x,y,W,H)
+  local peak=1
+  for _,value in ipairs(w.hist) do if value then peak=max(value,peak) end end
+  line(x,y+H,x+W-1,y+H,noir.rule)
+  local dx=(W-1)/35
+  for i=2,#w.hist do
+    local a,b=w.hist[i-1],w.hist[i]
+    if a and b then
+      line(x+floor((i-2)*dx),y+H-floor(a/peak*H),
+           x+floor((i-1)*dx),y+H-floor(b/peak*H),noir.gilt)
+    end
+  end
+end
+
+local function instrumentNote(w,d,rep,page)
+  if w.armUnknown then return "CHECK ARM SOURCE",noir.rose end
+  if w.gap then return "PARTIAL / SAMPLE GAP",noir.rose end
+  if rep and w.speedMissing then return "PARTIAL / GPS SAMPLES",noir.rose end
+  if not rep and not d.speed then return "GPS SPEED UNAVAILABLE",noir.rose end
+  if w.mahReset then return "mAh COUNTER RESET",noir.rose end
+  if w.mahPartial then return "mAh PARTIAL",noir.rose end
+  if rep and w.logOn and page~=4 then return w.logStatus,noir.soft end
+  return w.aircraft:upper(),noir.soft
+end
+
+local function nocturne(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
+  local labelH=select(2,measure("A",SMLSIZE))
+  local margin=W>=450 and 12 or 8
+  local head=H>=245 and 32 or 27
+  local bottom=H-labelH-7
+  rect(0,0,W,H,noir.black)
+  if W<65 or H<30 then return end
+  if W<160 or H<100 then
+    caption(3,2,W-6,"SQ DASH",noir.gilt)
+    if H>=2*labelH+5 then caption(3,3+labelH,W-6,"Larger zone",noir.soft) end
+    return
+  end
+
+  local compact=W<345 or H<190 or W/H<1.35
+  local narrow=W<300
+  if rep then rect(0,0,W,head,noir.wine) end
+  if not narrow then hallmark(margin,4,noir.gilt) end
+  local brandX=narrow and margin or margin+26
+  local stateW=measure(status,SMLSIZE)
+  local available=W-margin-stateW-brandX-15
+  if available>30 then
+    caption(brandX,6,available,available>=110 and "APEX / NOCTURNE" or "APEX",noir.gilt)
+  end
+  caption(margin,6,W-2*margin,status,(w.armUnknown or not w.seenSafe) and noir.rose or noir.ivory,RIGHT)
+  line(margin,head-1,W-margin-1,head-1,noir.rule)
+
+  local note,ink=instrumentNote(w,d,rep,page)
+  if compact and (narrow or H<160) then
+    local y=head+4
+    local val=fmt(sv,"%.0f").." "..unit
+    textBox(margin,y,W-2*margin,min(38,bottom-y),val,noir.ivory,0,true)
+    if bottom-y>=48 then
+      caption(margin,y+37,W-2*margin,"LQ "..fmt(d.lq,"%.0f%%").."   "..fmt(d.volt,"%.1f V"),noir.gilt)
+    end
+    if bottom-y>=65 then caption(margin,y+54,W-2*margin,duration.."   "..fmt(d.amp,"%.1f A"),noir.soft) end
+    caption(margin,bottom+2,W-2*margin,note,ink)
+    return
+  end
+
+  local pageNames={"PERFORMANCE","ESSENTIALS","BATTERY","LOGBOOK"}
+  local foot=pageNames[page].."  "..page.."/4"
+  local footW=measure(foot,SMLSIZE)
+  line(margin,bottom-2,W-margin-1,bottom-2,noir.rule)
+  caption(margin,bottom+1,W-2*margin-footW-10,note,ink)
+  caption(W-margin-footW,bottom+1,footW,foot,noir.gilt,RIGHT)
+  local top=head+7
+  local inner=W-2*margin
+  local tall=H>=245
+  local au=w.feet and "ft" or "m"
+  local used=(rep or w.state=="FLIGHT") and w.stats.mah or nil
+
+  if page==1 then
+    local left=floor(inner*.49)
+    local sep=margin+left
+    local showRail=H>=205
+    local railH=showRail and (tall and 44 or 33) or 0
+    local rail=bottom-railH-7
+    local heroH=rail-top-6
+    line(sep,top,sep,rail-6,noir.rule)
+    caption(margin,top,left-6,rep and "PEAK GROUND SPEED" or "GPS GROUND SPEED",noir.gilt)
+    local value=fmt(sv,"%.0f")
+    local ny=top+labelH+4
+    local timerY=rail-labelH-7
+    local uh=measure(unit,SMLSIZE)
+    local digitH=min(tall and 126 or 89, timerY-ny-(tall and 18 or 7),
+                     floor((left-uh-15)*64/(49*#value)))
+    digitH=max(12,digitH)
+    dialFigures(margin,ny,digitH,value)
+    local after=margin+floor(49*digitH/64+.5)*#value+2
+    txt(after,ny+digitH-labelH,unit,SMLSIZE,noir.gilt)
+    if tall and timerY-(ny+digitH)>=16 then trace(w,margin,ny+digitH+4,left-13,timerY-ny-digitH-9) end
+    caption(margin,timerY,left-9,"ARM TIME",noir.soft)
+    caption(margin,timerY,left-11,duration,noir.ivory,RIGHT)
+
+    local start=sep+9
+    local cw=floor((W-margin-start-9)/2)
+    local rowH=floor(heroH/3)
+    local function metric(col,row,label,v,u)
+      local x=start+col*(cw+9)
+      field(x,top+row*rowH,cw,rowH-2,label,v,u,tall and H>=340)
+    end
+    for row=1,2 do line(start,top+row*rowH-3,W-margin-1,top+row*rowH-3,noir.rule) end
+    metric(0,0,rep and "MIN PACK" or "PACK",fmt(d.volt,"%.2f"),"V")
+    metric(1,0,rep and "MIN LINK" or "LINK",fmt(d.lq,"%.0f"),"%")
+    metric(0,1,rep and "PEAK AMPS" or "CURRENT",fmt(d.amp,"%.1f"),"A")
+    metric(1,1,rep and "MIN RSSI" or "RSSI",fmt(d.rssi,"%.0f"),"dBm")
+    metric(0,2,rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f"),"W")
+    metric(1,2,rep and "MAX ALT" or "ALTITUDE",fmt(alt,"%.0f"),au)
+
+    if not showRail then return end
+    rect(margin,rail,inner,railH,rep and noir.wine or noir.field)
+    local slot=floor(inner/3)
+    local function peak(i,label,v,u)
+      local x=margin+i*slot+7
+      if i>0 then line(x-7,rail+5,x-7,rail+railH-6,noir.rule) end
+      field(x,rail+3,slot-12,railH-5,label,v,u,false)
+    end
+    peak(0,"PEAK SPEED",fmt(w.stats.speed and w.stats.speed*(w.mph and .621371 or 1),"%.0f"),unit)
+    peak(1,"PEAK ALT",fmt(w.stats.alt and w.stats.alt*(w.feet and 3.28084 or 1),"%.0f"),au)
+    peak(2,"USED",fmt(used,"%.0f"),"mAh")
+
+  elseif page==2 or page==3 then
+    local vals
+    if page==2 then
+      vals={{rep and "PEAK GROUND SPEED" or "GPS GROUND SPEED",fmt(sv,"%.0f"),unit},
+            {rep and "MAX ALTITUDE" or "ALTITUDE",fmt(alt,"%.0f"),au},
+            {rep and "MIN PACK" or "PACK VOLTAGE",fmt(d.volt,"%.2f"),"V"},
+            {rep and "MIN LINK" or "LINK QUALITY",fmt(d.lq,"%.0f"),"%"},
+            {"ARM TIME",duration,""},{rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f"),"W"}}
+    else
+      local drop=w.firstVolt and w.stats.volt and max(0,w.firstVolt-w.stats.volt)
+      local second=w.stats.volt
+      if rep then second=w.endVolt end
+      vals={{rep and "MIN PACK" or "LIVE PACK",fmt(d.volt,"%.2f"),"V"},
+            {rep and "LAST ARMED VOLT" or "MIN PACK",fmt(second,"%.2f"),"V"},
+            {"DROP FROM FIRST",fmt(drop,"%.2f"),"V"},
+            {rep and "PEAK CURRENT" or "CURRENT",fmt(d.amp,"%.1f"),"A"},
+            {"OBSERVED CAPACITY",fmt(used,"%.0f"),"mAh"},
+            {rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f"),"W"}}
+    end
+    local cw=floor(inner/2)
+    local rowH=floor((bottom-top-5)/3)
+    rect(margin,top,inner,rowH-2,rep and noir.wine or noir.field)
+    for i,v in ipairs(vals) do
+      local row=floor((i-1)/2)
+      local x=margin+(i-1)%2*cw+7
+      local y=top+row*rowH+3
+      if i%2==1 and row>0 then line(margin,y-4,W-margin-1,y-4,noir.rule) end
+      field(x,y,cw-13,rowH-6,v[1],v[2],v[3],true)
+    end
+  else
+    caption(margin,top,inner,"AIRCRAFT LOGBOOK",noir.gilt)
+    local y=top+labelH+5
+    local half=floor(inner/2)
+    local metricH=tall and 55 or 40
+    rect(margin,y,inner,metricH,noir.field)
+    field(margin+7,y+3,half-12,metricH-5,"SAVED FLIGHTS",tostring(w.total),"",true)
+    field(margin+half+7,y+3,half-12,metricH-5,"BEST GROUND SPEED",fmt(w.allSpeed and w.allSpeed*(w.mph and .621371 or 1),"%.0f"),unit,true)
+    y=y+metricH+5
+    caption(margin,y,inner,"TOTAL "..time(w.totalTime).."   /   PEAK "..fmt(w.allPower,"%.0f W"),noir.soft)
+    y=y+labelH+6
+    local statusY=bottom-labelH-5
+    if #w.recent==0 and y+labelH<=statusY then
+      caption(margin,y,inner,w.logOn and "NO SAVED FLIGHTS" or "ENABLE LogSD TO SAVE FLIGHTS",noir.ivory)
+    else
+      local step=labelH+7
+      local rows=min(#w.recent,max(0,floor((statusY-y)/step)))
+      for i=1,rows do
+        local r=w.recent[i]
+        line(margin,y-2,W-margin-1,y-2,noir.rule)
+        caption(margin,y,half,r.date:sub(1,16)..(r.partial and "*" or ""),noir.ivory)
+        caption(margin+half,y,inner-half,time(r.duration).."   /   "..fmt(r.speed and r.speed*(w.mph and .621371 or 1),"%.0f").." "..unit,noir.gilt,RIGHT)
+        y=y+step
+      end
+    end
+    caption(margin,statusY,inner,w.logStatus,noir.soft)
+  end
+end
+
 local function refresh(w,event,touch)
  local W,H=w.zone.w,w.zone.h;if event~=nil then W,H=LCD_W,LCD_H end
  if W<1 or H<1 then return end
- rect(0,0,W,H,bg)
- if W<160 or H<100 then if W>=65 and H>=30 then txt(3,3,"SQ DASH",SMLSIZE,w.accent);txt(3,16,"Larger zone",SMLSIZE,muted) end;return end
  local rep=w.state=="REPORT";local d=rep and w.stats or w.data
  local status=w.armSrc==0 and "SET ARM SOURCE" or (w.armUnknown and "ARM UNKNOWN" or (not w.seenSafe and "DISARM TO SYNC" or (rep and "LAST FLIGHT" or (w.state=="FLIGHT" and "ARM INPUT ON" or "STANDBY"))))
  local accent=rep and gold or w.accent
@@ -343,12 +598,18 @@ local function refresh(w,event,touch)
  local cell=voltage and fmt(voltage,"%.2f V/c") or "PACK"
  local duration=time(w.elapsed)
  local alt=d.alt and d.alt*(w.feet and 3.28084 or 1) or nil;local altUnit=w.feet and " ft" or " m"
- txt(6,3,"SQ / PILOT DASH  1.8",SMLSIZE,accent)
- if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
- line(6,17,W-7,17,border)
  local page=w.page
  if page==4 and not w.safeInput then page=1 end
+ if w.theme==7 then
+  nocturne(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
+  return
+ end
  if w.theme==6 and apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page) then return end
+ rect(0,0,W,H,bg)
+ if W<160 or H<100 then if W>=65 and H>=30 then txt(3,3,"SQ DASH",SMLSIZE,w.accent);txt(3,16,"Larger zone",SMLSIZE,muted) end;return end
+ txt(6,3,"SQ / PILOT DASH  1.8.1",SMLSIZE,accent)
+ if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
+ line(6,17,W-7,17,border)
  if W>=300 and H>=175 and page~=1 then
   local cw=floor((W-21)/2);local h=floor((H-60)/3);local x=8;local x2=x+cw+5;local y=38
   local function c(i,label,value,sub) card(i%2==0 and x2 or x,y+floor((i-1)/2)*(h+4),cw,h,label,value,sub,accent) end

@@ -5,6 +5,8 @@ CENTER,RIGHT,SOLID=0x40000000,0x20000000,0
 EVT_VIRTUAL_NEXT_PAGE,EVT_VIRTUAL_PREV_PAGE=100,101
 EVT_VIRTUAL_NEXT,EVT_VIRTUAL_PREV=102,103
 LCD_W,LCD_H=480,272
+local theme=tonumber(os.getenv("SQ_DASH_THEME") or "6")
+assert(theme==6 or theme==7)
 local tick,arm=0,-1024
 local W,H=480,272
 local readings={speed=123,volt=24.1,amp=32.6,mah=100,lq=97,rssi=-68,alt=42}
@@ -37,9 +39,10 @@ function lcd.drawLine(x,y,X,Y,p,c) pt(x,y);pt(X,Y);emit('drawLine',x,y,X,Y,p,c) 
 function lcd.drawCircle(x,y,r,c) pt(x-r,y-r);pt(x+r,y+r);emit('drawCircle',x,y,r,c) end
 function lcd.drawFilledTriangle(x,y,X,Y,xx,yy,c) pt(x,y);pt(X,Y);pt(xx,yy);emit('drawFilledTriangle',x,y,X,Y,xx,yy,c) end
 local api=assert(loadfile('sq-reactor/WIDGETS/SQDash/main.lua'))()
+assert(api.create({w=W,h=H},{}).theme==7, "new widget must default to Nocturne")
 local function setup()
  tick=tick+20;arm=-1024
- local w=api.create({w=W,h=H},{ArmSrc=1,ArmHigh=1,Theme=6,Cells=6})
+ local w=api.create({w=W,h=H},{ArmSrc=1,ArmHigh=1,Theme=theme,Cells=6})
  api.background(w);assert(w.state=='READY');return w
 end
 local function draw(w,event) labels={};commands={};api.refresh(w,event);assert(#commands<500,'drawing budget exceeded') end
@@ -72,9 +75,9 @@ for _,size in ipairs({{400,190},{320,240},{320,480},{240,160},{160,100},{80,64}}
  W,H=size[1],size[2];w=setup();for page=1,4 do w.page=page;draw(w) end
 end
 W,H=480,272;strict=true
-w=api.create({w=W,h=H},{Theme=6});draw(w);assert(labels['SET ARM SOURCE'])
+w=api.create({w=W,h=H},{Theme=theme});draw(w);assert(labels['SET ARM SOURCE'])
 -- Export reproducible primitive recordings for the design proof; not photographs.
-local out=io.open('/tmp/sq-apex-frames.json','w');out:write('[')
+local out=io.open(theme==7 and '/tmp/sq-nocturne-frames.json' or '/tmp/sq-apex-frames.json','w');out:write('[')
 local function json(v)
  if type(v)=='string' then return string.format('%q',v):gsub('\\\n','\\n') end
  if type(v)=='number' then return tostring(v) end
@@ -89,4 +92,4 @@ for page=1,4 do
  draw(w);if page>1 then out:write(',') end;out:write(json(commands))
 end
 w.page=1;draw(w);out:write(',',json(commands),']');out:close()
-print('PASS: real Lua execution; 4 Apex layouts; 4 landscape geometries; 6 fallback geometries; arm gating; missing speed; zero LQ; frozen report; units; bounded drawing; primitive recordings.')
+print('PASS theme '..theme..': real Lua execution; 4 Apex layouts; 4 landscape geometries; 6 fallback geometries; arm gating; missing speed; zero LQ; frozen report; units; bounded drawing; primitive recordings.')

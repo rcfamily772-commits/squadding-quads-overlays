@@ -7,7 +7,7 @@
 
 Independent, Squadding Quads-owned copy of the V5 frosted-glass overlay prototype, reproduced with permission of the original author.
 
-[SQ Reactor v1.0 — animated radio eye candy](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
+[SQ Pilot Dash v1.8.1 — APEX Nocturne for colour EdgeTX radios](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
 
 ## Status
 
