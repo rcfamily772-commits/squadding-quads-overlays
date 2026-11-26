@@ -37,6 +37,17 @@ $("vAltLabel").textContent=report?"MAX ALT":"ALTITUDE";$("vAlt").textContent=fmt
 $("peakSpeed").textContent=fmt(stats.speed==null?null:stats.speed*(mph?.621371:1),0,mph?" mph":" km/h");
 $("peakAlt").textContent=fmt(altitude(stats.alt),0," "+$("altUnits").value);
 $("footerRight").textContent=velocity&&page===1?fmt(d.mah,0," mAh"):"READ ONLY";
+$("nativeScreen").hidden=!velocity||page!==1;
+const nu=mph?" mph":" km/h",au=" "+$("altUnits").value,fac=mph?.621371:1;
+const set=(id,val)=>$(id).textContent=val;
+set("nTimerLabel",report?"LAST ARM TIME":"ARM TIME");set("nTimer",duration(elapsed));set("nState",report?"LAST FLIGHT":mode==="flight"?"ARM INPUT ON":"STANDBY");set("nPack","PACK "+String(packs+(mode==="flight"?1:0)).padStart(2,"0"));
+for(const [id,label,peak] of [["nVoltLabel","VOLT","MIN V"],["nAmpLabel","AMPS","MAX A"],["nPowerLabel","POWER","MAX W"],["nLqLabel","LINK","MIN LQ"],["nRssiLabel","RSSI","MIN RF"],["nAltLabel","ALT","MAX ALT"],["nSpeedLabel","GPS SPEED","PEAK SPEED"]])set(id,report?peak:label);
+set("nVolt",fmt(d.volt,2," V"));set("nAmp",fmt(d.amp,1," A"));set("nPower",fmt(d.watts,0," W"));set("nLq",fmt(d.lq,0,"%"));set("nRssi",fmt(d.rssi,0," dBm"));set("nAlt",fmt(altitude(d.alt),0,au));set("nSpeed",fmt(d.speed==null?null:d.speed*fac));set("nUnit",nu.trim());
+set("nPeakSpeed",fmt(stats.speed==null?null:stats.speed*fac,0,nu));set("nPeakAlt",fmt(altitude(stats.alt),0,au));set("nUsed",fmt(d.mah,0," mAh"));
+set("nFoot",report?"REPORT FROZEN / RE-ARM":$("missing").checked?"GPS DATA UNAVAILABLE":"BLACK LABEL / V1.6");
+const nmax=Math.max(1,...history.filter(v=>v!=null));let np="",nprev=false;history.forEach((v,i)=>{if(v==null){nprev=false;return;}np+=(nprev?"L":"M")+(13+i*454/35).toFixed(1)+" "+(217-v/nmax*14).toFixed(1)+" ";nprev=true;});$("nTrace").setAttribute("d",np);set("nTraceMax",history.some(v=>v!=null)?fmt(nmax*fac,0,nu):"—");
+for(let i=0;i<nativeTicks.length;i++)nativeTicks[i].setAttribute("stroke",d.speed!=null&&i/31<=Math.min(1,d.speed/180)?"var(--glow)":"#124456");
+
 dash.style.setProperty("--glow",report?"#ebc16d":$("palette").value);
 $("state").textContent=report?"LAST FLIGHT":mode==="flight"?"ARM INPUT ON":"STANDBY";
 for(const [id,a,b] of [["speedLabel","GPS SPEED","PEAK SPEED"],["voltLabel","PACK VOLTAGE","MIN PACK"],["ampLabel","CURRENT","PEAK CURRENT"],["lqLabel","LINK QUALITY","MIN LINK"],["rssiLabel","RSSI dBm","WEAKEST RSSI"],["altLabel","ALTITUDE","MAX ALT"]])$(id).textContent=report?b:a;
@@ -51,7 +62,7 @@ $("recordLabel").textContent=report&&newBest?"NEW SESSION BEST":"SESSION RECORDS
 const maxSpeed=Math.max(1,...history.filter(v=>v!=null));let p="",prev=false;
 history.forEach((v,i)=>{if(v==null){prev=false;return;}p+=(prev?"L":"M")+(i*320/35).toFixed(1)+" "+(61-v/maxSpeed*53).toFixed(1)+" ";prev=true;});$("trace").setAttribute("d",p);
 $("time").textContent=String(Math.floor(elapsed/60)).padStart(2,"0")+":"+String(Math.floor(elapsed%60)).padStart(2,"0");
-$("foot").textContent=report?"REPORT FROZEN / RE-ARM TO RESET":$("missing").checked?"GPS DATA UNAVAILABLE":"BLACK LABEL / V1.5";
+$("foot").textContent=report?"REPORT FROZEN / RE-ARM TO RESET":$("missing").checked?"GPS DATA UNAVAILABLE":"BLACK LABEL / V1.6";
 $("arm").disabled=mode==="flight";$("disarm").disabled=mode!=="flight";$("aircraft").disabled=mode==="flight";alternate(d,report,mph);}
 function sample(now){if(mode!=="flight")return;let dt=Math.min(.5,Math.max(0,(now-last)/1000));last=now;elapsed=(now-start)/1000;let t=+$("throttle").value/100;
 let speed=Math.max(0,t*165+Math.sin(elapsed*1.1)*t*11),amp=t*96+Math.max(0,Math.sin(elapsed*2))*t*9;used+=amp*dt/3.6;
@@ -63,6 +74,7 @@ $("disarm").onclick=()=>{sample(performance.now());mode="report";packs++;newBest
 $("reset").onclick=()=>{mode="ready";firstVolt=endVolt=null;stats={};history=[];histAt=-Infinity;speedSum=speedN=0;best=null;packs=0;newBest=false;used=elapsed=0;live={speed:0,volt:25.2,amp:0,lq:100,rssi:-52,alt:0,mah:null};render();};
 for(const id of ["palette","units","altUnits","missing","aircraft"])$(id).onchange=()=>{if(mode==="ready")live.speed=$("missing").checked?null:0;render();};
 for(let i=0;i<33;i++){const a=(135+i*270/32)*Math.PI/180,r=i%4===0?75:81,el=document.createElementNS("http://www.w3.org/2000/svg","line");for(const [k,v] of Object.entries({x1:110+r*Math.cos(a),y1:90+r*Math.sin(a),x2:110+87*Math.cos(a),y2:90+87*Math.sin(a),stroke:"#91b5c7","stroke-width":i%4===0?2:1}))el.setAttribute(k,v);$("ticks").append(el);}
+const nativeTicks=[];for(let i=0;i<32;i++){const a=(135+i*270/31)*Math.PI/180,r=i%4===0?54:57,el=document.createElementNS("http://www.w3.org/2000/svg","line");for(const [k,v] of Object.entries({x1:240+r*Math.cos(a),y1:110+r*Math.sin(a),x2:240+61*Math.cos(a),y2:110+61*Math.sin(a),stroke:"#124456","stroke-width":2}))el.setAttribute(k,v);$("nTicks").append(el);nativeTicks.push(el);}
 for(const b of document.querySelectorAll("[data-page]"))b.onclick=()=>{page=+b.dataset.page;for(const x of document.querySelectorAll("[data-page]"))x.setAttribute("aria-pressed",String(x===b));render();};
 $("exportLog").onclick=()=>{const fields=["date","duration","speed","avg","alt","volt","amp","watts","mah","lq","rssi","endV","partial"];const csv=fields.join(",")+"\n"+rowsFor(name()).map(r=>fields.map(k=>r[k]??"").join(",")).join("\n");const url=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));const a=document.createElement("a");a.href=url;a.download="SQ_Pilot_Dash_demo.csv";a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
 setInterval(()=>{if(mode==="flight"){sample(performance.now());render();}},150);
@@ -74,5 +86,5 @@ const u16=x=>{v.setUint16(p,x,true);p+=2;},u32=x=>{v.setUint32(p,x,true);p+=4;},
 u32(0x04034b50);u16(20);u16(0);u16(0);u16(0);u16(0x21);u32(crc);u32(bytes.length);u32(bytes.length);u16(n.length);u16(0);put(n);put(bytes);
 const cd=p;u32(0x02014b50);u16(20);u16(20);u16(0);u16(0);u16(0);u16(0x21);u32(crc);u32(bytes.length);u32(bytes.length);u16(n.length);u16(0);u16(0);u16(0);u16(0);u32(0);u32(0);put(n);
 const size=p-cd;u32(0x06054b50);u16(0);u16(0);u16(1);u16(1);u32(size);u32(cd);u16(0);return a;}
-$("download").onclick=async()=>{const b=$("download"),s=$("downloadstatus");b.disabled=true;s.textContent="Preparing ZIP…";try{const r=await fetch("WIDGETS/SQDash/main.lua",{cache:"no-cache"});if(!r.ok)throw Error("Source unavailable");const data=new Uint8Array(await r.arrayBuffer());if(!new TextDecoder().decode(data).startsWith("-- SQ Pilot Dash v1.5"))throw Error("Unexpected source");const url=URL.createObjectURL(new Blob([zip("WIDGETS/SQDash/main.lua",data)],{type:"application/zip"}));const a=document.createElement("a");a.href=url;a.download="SQ_Pilot_Dash_v1.5.zip";a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);s.textContent="ZIP prepared. Extract to the SD card root.";}catch(e){s.textContent="ZIP unavailable. Use the Lua source link above.";}finally{b.disabled=false;}};
+$("download").onclick=async()=>{const b=$("download"),s=$("downloadstatus");b.disabled=true;s.textContent="Preparing ZIP…";try{const r=await fetch("WIDGETS/SQDash/main.lua",{cache:"no-cache"});if(!r.ok)throw Error("Source unavailable");const data=new Uint8Array(await r.arrayBuffer());if(!new TextDecoder().decode(data).startsWith("-- SQ Pilot Dash v1.6"))throw Error("Unexpected source");const url=URL.createObjectURL(new Blob([zip("WIDGETS/SQDash/main.lua",data)],{type:"application/zip"}));const a=document.createElement("a");a.href=url;a.download="SQ_Pilot_Dash_v1.6.zip";a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);s.textContent="ZIP prepared. Extract to the SD card root.";}catch(e){s.textContent="ZIP unavailable. Use the Lua source link above.";}finally{b.disabled=false;}};
 })();
