@@ -9,7 +9,7 @@ local function clamp(v,a,b,d) if type(v)~="number" or v~=v then return d end ret
 -- Field metadata and physical units. Unknown units are rejected, not guessed.
 local specs={
  speed={{"GSpd","GPS Speed","Speed"},{[4]=1.852,[5]=3.6,[6]=1.09728,[7]=1,[8]=1.609344},0,700},
- volt={{"RxBt","VFAS","Vbat","Bat"},{[1]=1},0.1,100},
+ volt={{"VFAS","Vbat","Bat","RxBt"},{[1]=1},0.1,100},
  amp={{"Curr","Current"},{[2]=1,[3]=.001},-20,500},
  mah={{"Capa","mAh","Consumption"},{[14]=1},0,100000},
  lq={{"RQly","LQ","Link Quality"},{[13]=1,[0]=1},0,100},
@@ -101,7 +101,7 @@ local function refresh(w,event)
  if W<1 or H<1 then return end
  rect(0,0,W,H,bg)
  if W<160 or H<100 then if W>=65 and H>=30 then txt(3,3,"SQ DASH",SMLSIZE,w.accent);txt(3,16,"Larger zone",SMLSIZE,muted) end;return end
- local rep=w.state=="REPORT" and not w.armUnknown;local d=rep and w.stats or w.data
+ local rep=w.state=="REPORT";local d=rep and w.stats or w.data
  local status=w.armSrc==0 and "SET ARM SOURCE" or (w.armUnknown and "ARM UNKNOWN" or (not w.seenSafe and "DISARM TO SYNC" or (rep and "LAST FLIGHT" or (w.state=="FLIGHT" and "ARM INPUT ON" or "STANDBY"))))
  local accent=rep and gold or w.accent
  local sv=d.speed and d.speed*(w.mph and .621371 or 1) or nil
@@ -147,12 +147,12 @@ local function refresh(w,event)
  local by=y+top+gap;local bw=floor((W-2*margin-3*gap)/4)
  card(margin,by,bw,bot,"FLIGHT TIME",duration,nil,accent)
  card(margin+bw+gap,by,bw,bot,rep and "MAX ALT" or "ALTITUDE",fmt(d.alt,"%.0f m"),nil,accent)
- local m=rep and d.mah or nil;if w.state=="FLIGHT" then m=w.stats.mah end
+ local m=rep and d.mah or nil;if w.state=="FLIGHT" and d.mah~=nil then m=w.stats.mah end
  card(margin+2*(bw+gap),by,bw,bot,"USED mAh",fmt(m,"%.0f"),nil,accent)
  card(margin+3*(bw+gap),by,bw,bot,"PACK / CELL",voltage and fmt(voltage,"%.2f V") or "--",nil,accent)
  local foot=w.armUnknown and "CHECK ARM SOURCE" or (w.gap and "PARTIAL / ARM OR SAMPLE GAP" or (w.mahReset and "mAh COUNTER RESET" or (w.mahPartial and "mAh PARTIAL" or "BLACK LABEL / V1.1")))
  txt(8,H-14,foot,SMLSIZE,w.gap and red or muted)
- txt(W-8,H-14,rep and "RE-ARM TO RESET" or "READ ONLY",RIGHT+SMLSIZE,muted)
+ if W>=440 or not w.gap then txt(W-8,H-14,rep and "RE-ARM TO RESET" or "READ ONLY",RIGHT+SMLSIZE,muted) end
 end
 -- Reset consumption bookkeeping on each observed arm edge.
 local function poll(w)
