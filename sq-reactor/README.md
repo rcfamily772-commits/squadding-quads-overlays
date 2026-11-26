@@ -1,11 +1,30 @@
-# SQ Reactor v1.0 — Black Label
+# SQ Pilot Dash v1.1 — Black Label
 
-[Animated browser preview / download](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
+**Formerly SQ Reactor.** The existing project has evolved from a decorative animated core into a read-only FPV telemetry dashboard. Reactor v1.0 remains available unchanged.
 
-A read-only decorative EdgeTX colour-screen widget: rotating mechanical rings, pulsing core, sparks, five palettes, configurable speed, optional stick response, callsign and fresh telemetry. No control writes, SD writes, sounds, backlight overrides or background polling. All geometry drawn with standard LCD primitives. Actual refresh cadence depends on firmware and processor; this is a field preview, not flight-tested.
+[Project page, interactive demo and v1.1 ZIP](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
 
-## Install
-Merge WIDGETS/SQReact/main.lua into the SD card root. Restart and add SQReact to your main screen. Use the largest available zone. No full-screen input mode needed for animation. Widget Settings: Theme 1 Ion Blue, 2 Toxic Green, 3 Molten Red, 4 Black Gold, 5 Neon Violet; Speed 0 static, 1 slow, 2 normal, 3 fast; React toggles decorative aileron/elevator response; Telemetry toggles read-only TX voltage and RQly/LQ; Callsign up to eight characters. Colour EdgeTX 2.8+ target, hardware validation pending. Smaller zones use simplified layout. Unknown or stale data shown as --; session is widget uptime. Never rely on Reactor for flight safety or low battery warnings. Test disarmed; switch to static or remove widget if radio performance suffers. Browser uses simulated data and illustrative geometry.
+## v1.1 field preview
+- Live GPS ground speed (km/h or mph), voltage, current, LQ, RSSI dBm, altitude, flight timer and observed mAh consumption.
+- Automatic last-flight view: sampled peak speed/current/altitude, minimum voltage/LQ and weakest RSSI; observed mAh delta and arm-input elapsed time.
+- Five palettes, segmented speed dial, compact zone layout, gold last-flight report.
+- Background sampling while widget is hidden (subject to EdgeTX scheduling); fresh/current sensor values only; physical units checked and converted.
+- Browser demo includes arm/disarm, throttle simulation, GPS loss, themes and downloadable ZIP assembled from the published Lua source.
 
-## Development
-Run `lua sq-reactor/tests/smoke.lua` from repository root using desktop Lua. Mock checks validate dashboard geometry and state, not radio performance. API references: https://luadoc.edgetx.org/latest/api-overview/script-types/widget-scripts/ and https://luadoc.edgetx.org/latest/api-reference/sources/get-source-value/ .
+## Installation
+Extract the ZIP into your SD card root: WIDGETS/SQDash/main.lua. Restart EdgeTX and add SQDash to a large colour widget zone. Existing SQReact installations are unaffected.
+
+In widget settings:
+- ArmSrc: select a dedicated two-position arm source (prefer the arm AUX output channel or matching logical switch). Default unconfigured. Verify with propellers removed.
+- ArmHigh: on for positive armed input, off for negative armed input. Middle or unavailable input is unknown. The widget waits for an observed disarmed state before recording.
+- Cells: verified pack cell count, 0 disables calculated average voltage per cell.
+- Theme: 1–5; MPH: switch speed unit.
+
+Discover sensors and verify battery sensor corresponds to the aircraft pack (RxBt can represent receiver supply). GPS speed and altitude require appropriate compatible sensors. No values are invented when sensors are absent. Sampled extrema are not flight-controller blackbox maxima. Arm input is not verified FC arm status. Capacity is a delta from the first observed value; a reset invalidates it. Missing samples can hide peaks; report stays in RAM until re-arm, settings change or reload. Colour EdgeTX 2.8+ target, physical radio validation pending. Never rely on this widget for flight safety. No control, model or SD writes.
+
+## Validation
+Browser JS checked with mocked DOM: arm, changing simulated speed, disarm, frozen report, re-arm, missing GPS, ZIP entry and payload. Actual browser rendering, EdgeTX Lua runtime, physical hardware and Pages deployment not verified by this check.
+
+Original Reactor v1.0: SQ_Reactor_v1.0.zip and WIDGETS/SQReact/main.lua retained. Existing smoke.lua pertains to v1.0.
+
+API: https://luadoc.edgetx.org/latest/api-reference/sources/get-source-value/ and https://luadoc.edgetx.org/latest/api-overview/script-types/widget-scripts/
