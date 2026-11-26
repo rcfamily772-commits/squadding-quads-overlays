@@ -233,7 +233,7 @@ local function velocity(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration)
  shell(mid,3,center,header-4,rep and gold or dimCyan,navy)
  local timerLabel=rep and "LAST ARM TIME" or "ARM TIME"
  txt(cx,4,timerLabel,CENTER+SMLSIZE,muted)
- fit(cx,15,duration,MIDSIZE,white,center-10)
+ fit(cx,header>=36 and 15 or 16,duration,header>=36 and MIDSIZE or SMLSIZE,white,center-10)
  shell(right,3,side,header-4,bevel,navy)
  fit(right+floor(side/2),6,status,SMLSIZE,w.armUnknown and red or accent,side-10)
  fit(right+floor(side/2),header>=36 and 20 or 17,"PACK "..(w.flights+(w.state=="FLIGHT" and 1 or 0)),SMLSIZE,muted,side-10)
