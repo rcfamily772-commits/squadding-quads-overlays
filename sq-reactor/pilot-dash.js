@@ -13,11 +13,21 @@ const duration=v=>String(Math.floor(v/60)).padStart(2,"0")+":"+String(Math.floor
 function saveDemo(){const n=flightAircraft;const r={date:new Date().toISOString(),duration:elapsed,...stats,avg:speedN?speedSum/speedN:null,endV:endVolt,partial:gpsMissing};Object.defineProperty(logs,n,{value:[r,...rowsFor(n)].slice(0,500),writable:true,enumerable:true,configurable:true});try{localStorage.setItem(storageKey,JSON.stringify(logs));storeOK=true;}catch(e){storeOK=false;}}
 const extrema={watts:Math.max,speed:Math.max,volt:Math.min,amp:Math.max,lq:Math.min,rssi:Math.min,alt:Math.max,mah:Math.max};
 const canvas=$('lcd'),ctx=canvas.getContext('2d');
+const root=new URL(document.body.dataset.dashboardRoot||'./',document.baseURI);
+const pilot=new Image();
+pilot.src=document.body.dataset.pilot||new URL('WIDGETS/SQDash/pilot.png',root).href;
+const reduceMotion=matchMedia('(prefers-reduced-motion: reduce)');
+let landedAt=0;
 let worker,source,adapter,busy=false,queued=null,frame=0,deadline,engineFailed=false;
+pilot.onload=()=>{if(worker&&+$('palette').value===9)render();};
 const sizeOf=f=>f&0x10000000?64:f&0x08000000?32:f&0x04000000?22:12;
 const colour=f=>'#'+(f&0xffffff).toString(16).padStart(6,'0');
 function paint(cmd){
  const [op,...v]=cmd;
+ if(op==='drawBitmap'){
+  if(pilot.complete&&pilot.naturalWidth)ctx.drawImage(pilot,v[1],v[2],Math.ceil(pilot.naturalWidth*v[3]/100),Math.ceil(pilot.naturalHeight*v[3]/100));
+  return;
+ }
  if(op==='drawText'){
   const [x,y,t,f]=v,size=sizeOf(f);ctx.font=`${size>=22?600:500} ${size}px Arial`;ctx.fillStyle=colour(f);ctx.textAlign=f&0x40000000?'center':f&0x20000000?'right':'left';ctx.textBaseline='top';ctx.fillText(String(t),x,y);return;
  }
@@ -38,9 +48,9 @@ function render(){
  const report=mode==='report',rows=rowsFor(name()),valid=rows.filter(r=>r&&Number.isFinite(r.duration));
  const complete=valid.filter(r=>!r.partial),maxOf=k=>{const a=complete.map(r=>r[k]).filter(Number.isFinite);return a.length?Math.max(...a):null;};
  const [width,height]=$('size').value.split('x').map(Number);
- const theme=+$('palette').value,colors=['43daff','63ea9a','ff6f4b','e5be6b','bb89ff','62dae7','d8b782','cfa471'],hex=colors[theme-1];
+ const theme=+$('palette').value,colors=['43daff','63ea9a','ff6f4b','e5be6b','bb89ff','62dae7','d8b782','cfa471','ffd932'],hex=colors[theme-1];
  if(page===4&&mode==='flight')page=1;
- const snap={width,height,theme,showSummary,entry,mph:$('units').value==='mph',feet:$('altUnits').value==='ft',page,aircraft:name(),state:report?'REPORT':mode==='flight'?'FLIGHT':'READY',elapsed,flights:packs,newBest,bestSpeed:best,bestTime:null,bestAmp:null,firstVolt,endVolt,
+ const snap={clock:Math.floor(performance.now()/10),landedAt,still:reduceMotion.matches,width,height,theme,showSummary,entry,mph:$('units').value==='mph',feet:$('altUnits').value==='ft',page,aircraft:name(),state:report?'REPORT':mode==='flight'?'FLIGHT':'READY',elapsed,flights:packs,newBest,bestSpeed:best,bestTime:null,bestAmp:null,firstVolt,endVolt,
   total:valid.length,totalTime:valid.reduce((t,r)=>t+r.duration,0),allSpeed:maxOf('speed'),allPower:maxOf('watts'),allTime:maxOf('duration'),logStatus:storeOK?'LOCAL DEMO HISTORY':'MEMORY ONLY / STORAGE UNAVAILABLE',gap:false,speedMissing:gpsMissing,armUnknown:false,seenSafe:true,safeInput:mode!=='flight',r:parseInt(hex.slice(0,2),16),g:parseInt(hex.slice(2,4),16),b:parseInt(hex.slice(4,6),16),
   live,stats,history,recent:valid.slice(0,8).map(r=>({...r,date:String(r.date).replace('T',' ')}))};
  $('arm').disabled=mode==='flight'||!worker||engineFailed;$('disarm').disabled=mode!=='flight';$('aircraft').disabled=mode==='flight';
@@ -58,8 +68,8 @@ function render(){
 }
 async function init(){
  try{
-  [source,adapter]=await Promise.all(['WIDGETS/SQDash/main.lua','preview-runtime.lua'].map(async u=>{const r=await fetch(u,{cache:'no-cache'});if(!r.ok)throw Error('could not load renderer');return r.text();}));
-  worker=new Worker('preview-worker.js?v=1.8.5');
+  [source,adapter]=await Promise.all(['WIDGETS/SQDash/main.lua','preview-runtime.lua'].map(async u=>{const r=await fetch(new URL(u,root),{cache:'no-cache'});if(!r.ok)throw Error('could not load renderer');return r.text();}));
+  worker=new Worker(new URL('preview-worker.js?v=1.8.7',root));
   worker.onerror=e=>fail(e.message||'worker error');
   worker.onmessage=({data})=>{
    clearTimeout(deadline);busy=false;if(data.error){fail(data.error);return;}
@@ -81,7 +91,7 @@ live={speed:$("missing").checked?null:speed,volt:Math.max(19,25.2-t*1.9-used*.00
 live.watts=live.volt*live.amp;if(firstVolt==null)firstVolt=live.volt;endVolt=live.volt;if(live.speed==null)gpsMissing=true;if(live.speed!=null){speedSum+=live.speed;speedN++;}if(now-histAt>=1000){histAt=now;history.push(live.speed);if(history.length>36)history.shift();}
 for(const k in extrema)if(live[k]!=null)stats[k]=stats[k]==null?live[k]:extrema[k](stats[k],live[k]);}
 $("arm").onclick=()=>{showSummary=false;entry=0;mode="flight";flightAircraft=name();firstVolt=endVolt=null;gpsMissing=false;stats={};history=[];histAt=-Infinity;speedSum=speedN=0;newBest=false;used=0;elapsed=0;start=last=performance.now();sample(start);render();};
-$("disarm").onclick=()=>{sample(performance.now());mode="report";showSummary=true;entry=0;packs++;newBest=stats.speed!=null&&(best==null||stats.speed>best);if(newBest)best=stats.speed;saveDemo();render();};
+$("disarm").onclick=()=>{sample(performance.now());mode="report";landedAt=Math.floor(performance.now()/10);showSummary=true;entry=0;packs++;newBest=stats.speed!=null&&(best==null||stats.speed>best);if(newBest)best=stats.speed;saveDemo();render();};
 $("reset").onclick=()=>{showSummary=false;entry=0;mode="ready";firstVolt=endVolt=null;stats={};history=[];histAt=-Infinity;gpsMissing=false;speedSum=speedN=0;best=null;packs=0;newBest=false;used=elapsed=0;live={speed:$("missing").checked?null:0,volt:25.2,amp:0,lq:100,rssi:-52,alt:0,mah:null};render();};
 for(const id of ["palette","units","altUnits","missing"])$(id).onchange=()=>{if(mode==="ready")live.speed=$("missing").checked?null:0;render();};
 
@@ -96,6 +106,6 @@ $('older').onclick=()=>stepEntry(1);
 $('newer').onclick=()=>stepEntry(-1);
 $('size').onchange=render;$('throttle').oninput=()=>{$('throttleValue').textContent=$('throttle').value+'%';};
 $('exportLog').onclick=()=>{const fields=['date','duration','speed','avg','alt','volt','amp','watts','mah','lq','rssi','endV','partial'];const csv=fields.join(',')+'\n'+rowsFor(name()).map(r=>fields.map(k=>r[k]??'').join(',')).join('\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='SQ_Pilot_Dash_demo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
-setInterval(()=>{if(mode==='flight'){sample(performance.now());render();}},200);
+setInterval(()=>{if(mode==='flight'){sample(performance.now());render();}else if(showSummary&&+$('palette').value===9&&performance.now()/10-landedAt<110){render();}},125);
 init();
 })();

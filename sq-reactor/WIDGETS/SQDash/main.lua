@@ -1,8 +1,8 @@
--- SQ Pilot Dash v1.8.5 | Apex Tailor | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
+-- SQ Pilot Dash v1.8.7 | Boy Wonder | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
-local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,8,1,8},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,1}}
-local palettes={{67,218,255},{99,234,154},{255,111,75},{229,190,107},{187,137,255},{35,221,250},{216,183,130},{207,164,113}}
+local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,8,1,9},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,1}}
+local palettes={{67,218,255},{99,234,154},{255,111,75},{229,190,107},{187,137,255},{35,221,250},{216,183,130},{207,164,113},{255,217,50}}
 local bg=rgb(5,10,17);local panel=rgb(12,22,32);local border=rgb(35,53,66)
 local white=rgb(234,244,250);local muted=rgb(139,163,180);local gold=rgb(235,193,109);local red=rgb(255,107,89)
 local function clamp(v,a,b,d) if type(v)~="number" or v~=v then return d end return max(a,min(b,floor(v))) end
@@ -160,7 +160,7 @@ local function sample(w)
   w.showSummary=false;w.entry=nil;w.report=nil
   w.state="FLIGHT";w.start=now;w.stats={};w.elapsed=0;w.gap=false;w.startMah=d.mah;w.mahReset=false;w.prevMah=nil;w.mahPartial=d.mah==nil;w.hist={};w.histAt=nil;w.speedSum=0;w.speedN=0;w.newBest=false;w.firstVolt=d.volt;w.endVolt=d.volt;w.speedMissing=false;w.voltMissing=false
  elseif not armed and w.state=="FLIGHT" then
-  w.elapsed=max(0,(now-w.start)/100);w.state="REPORT";finish(w);return
+  w.elapsed=max(0,(now-w.start)/100);w.state="REPORT";w.landedAt=now;finish(w);return
  end
  if w.state~="FLIGHT" then return end
  w.elapsed=max(0,(now-w.start)/100)
@@ -181,7 +181,14 @@ end
 local function update(w,o)
  if w.reader then close(w.reader);w.reader=nil end
  o=o or {};w.armSrc=clamp(o.ArmSrc,0,65535,0);w.high=o.ArmHigh==nil or o.ArmHigh==1 or o.ArmHigh==true
- w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,8,8);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==nil or o.LogSD==1 or o.LogSD==true
+ w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,9,8);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==nil or o.LogSD==1 or o.LogSD==true
+ if w.theme==9 and Bitmap and Bitmap.open then
+  if not w.comicPilot then
+   local ok,pilot=pcall(Bitmap.open,"/WIDGETS/SQDash/pilot.png")
+   if ok then w.comicPilot=pilot end
+  end
+ else w.comicPilot=nil end
+ w.landedAt=nil
  local p=palettes[w.theme];w.accent=rgb(p[1],p[2],p[3]);w.dim=rgb(floor(p[1]*.22),floor(p[2]*.22),floor(p[3]*.22))
  w.state="SETUP";w.seenSafe=false;w.armUnknown=true;w.stats={};w.data={};w.elapsed=0;w.last=nil;w.resolved=nil;w.prevMah=nil;w.mahPartial=false;w.hist={};w.histAt=nil;w.flights=0;w.bestSpeed=nil;w.bestTime=nil;w.bestAmp=nil;w.newBest=false
  w.recent={};w.total=0;w.totalTime=0;w.allSpeed=nil;w.allTime=nil;w.allPower=nil;w.bytes=0;w.buffer="";w.loaded=false;w.readStarted=false;w.logBlocked=false;w.pending={};w.sessionRecent=0;w.report=nil;w.showSummary=false;w.entry=nil;w.logPath=nil;w.safeInput=false;w.logStatus=w.logOn and "WAIT DISARM / LOAD SD" or "SD LOG OFF";w.aircraft="Aircraft";modelId(w);if w.logOn and not w.logPath then w.logStatus="SD MODEL ID UNAVAILABLE" end
@@ -874,12 +881,287 @@ local function flightReport(w,W,H,r,entry)
  end
 end
 
+-- Boy Wonder. The radio loads one small cel when Theme 9 is selected.
+local comic={
+ ink=rgb(29,19,55), violet=rgb(116,69,184), deep=rgb(70,41,110),
+ sky=rgb(95,220,240), mist=rgb(183,244,237), cream=rgb(255,248,224),
+ yellow=rgb(255,217,50), pink=rgb(255,92,164), mint=rgb(100,238,185)
+}
+local function comicPanel(x,y,width,height,colour)
+ rect(x,y,width,height,comic.ink)
+ rect(x+2,y+2,width-4,height-4,colour)
+end
+
+-- All moving parts live inside the illustrated strip. The readouts stay anchored.
+local function comicScene(w,x,y,width,height,frame,landing)
+ local c=comic
+ rect(x,y,width,height,c.sky)
+ if width<70 or height<26 then return end
+ local bottom=y+height-1
+ local horizon=y+floor(height*.78)
+ local sunX=x+floor(width*.59)
+ local radius=max(4,floor(height*.25))
+ lcd.drawFilledCircle(sunX,y+radius+1,radius,c.yellow)
+ for i=1,3 do
+  local off=(i*23+frame)%(width-22)
+  rect(x+off,y+2+i*2,10+i*3,2,c.mist)
+ end
+ local pitch=max(10,floor(height*.24))
+ local buildings={.4,.75,.50,1,.62,.35,.88}
+ local function rooftops(step,scroll,base,scale,colour)
+  for i=0,math.ceil(width/step) do
+   local left=x+i*step-scroll%step
+   local right=min(x+width,left+step-2)
+   local roof=base-floor(scale*buildings[(i+floor(scroll/step))%7+1])
+   local start=max(x,left)
+   if right>start then
+    rect(start,roof,right-start,bottom-roof+1,colour)
+    if right-start>9 and roof+4<bottom then rect(start+3,roof+3,min(6,right-start-4),2,c.mist) end
+   end
+  end
+ end
+ rooftops(pitch,floor(frame*.6),horizon,height*.30,c.violet)
+ rooftops(pitch+8,frame*2,bottom,height*.23,c.deep)
+ -- A Potteries bottle kiln and its chimney pass behind the pilot.
+ local kilnX=x+floor(width*.65)-(frame%(max(1,floor(width*.18))))
+ local neck=max(2,floor(height*.037))
+ local rim=horizon-floor(height*.29)
+ rect(kilnX-neck,rim,2*neck,4*neck,c.ink)
+ lcd.drawFilledTriangle(kilnX-neck,rim+2*neck,kilnX-4*neck,horizon,kilnX+neck,rim+2*neck,c.ink)
+ lcd.drawFilledTriangle(kilnX-4*neck,horizon,kilnX+4*neck,horizon,kilnX+neck,rim+2*neck,c.ink)
+ rect(kilnX-4*neck,horizon,8*neck,bottom-horizon+1,c.ink)
+ local active=w.state=="FLIGHT" and not w.armUnknown
+ local rush=min(12,floor((w.data.speed or 0)/12))
+ for i=1,5 do
+  local length=min(floor(width*.18),10+i*2+(active and rush or 0))
+  local sx=x+((i*41-frame*(i%3+1))%(width-length))
+  local sy=y+3+(i*17)%max(1,floor(height*.54))
+  rect(sx,sy,length,i%2+1,i%2==0 and c.cream or c.mist)
+ end
+ -- A striped FPV gate sweeps through the midground once per pass.
+ if active and height>=60 then
+  local gateW=floor(height*.62);local period=48
+  local gx=x+width-floor((frame%period)*(width+gateW)/period)
+  local gy=y+floor(height*.32);local post=max(3,floor(height*.065))
+  if gx>=x and gx+gateW<x+width then
+   rect(gx,gy,gateW,post,c.ink);rect(gx,gy,post,bottom-gy+1,c.ink)
+   rect(gx+gateW-post,gy,post,bottom-gy+1,c.ink)
+   rect(gx+1,gy+1,gateW-2,post-2,c.pink)
+   for py=gy+post,bottom-post,post*2 do
+    rect(gx+1,py,post-2,post,c.cream);rect(gx+gateW-post+1,py,post-2,post,c.pink)
+   end
+  end
+ end
+ -- High-speed action lines converge towards the vanishing point.
+ if active and rush>=5 or landing then
+  for i=0,2 do
+   local offset=(frame+i*3)%8
+   local ax=x+width-1;local ay=y+3+i*max(3,floor(height*.12))
+   local dx=min(floor(width*.12),12+rush+offset)
+   lcd.drawFilledTriangle(ax,ay,ax,ay+3,ax-dx,ay+5,c.cream)
+  end
+ end
+ -- Pop in on arm and squash down on disarm, then hold the final frame.
+ local bounce=active and math.sin(frame*.37) or 0
+ local fit=min((width*.53)/180,(height-10)/120,1.8)
+ if active and not w.previewStill and w.elapsed<.6 then fit=fit*(.76+.24*w.elapsed/.6) end
+ if landing then fit=fit*(1-.12*math.sin(landing*math.pi)) end
+ local scale=max(1,floor(fit*100))
+ local sw,sh=math.ceil(180*scale/100),math.ceil(120*scale/100)
+ local sx=x+floor(width*.75-sw/2+bounce*min(13,width*.035))
+ local sy=y+floor((height-sh)/2+bounce*min(6,(height-sh)/2))
+ sx=max(x,min(x+width-sw,sx));sy=max(y,min(y+height-sh,sy))
+ if w.comicPilot and lcd.drawBitmap then
+  lcd.drawBitmap(w.comicPilot,sx,sy,scale)
+  if active and not w.previewStill and scale>=50 then
+   -- Glints sweep the four prop discs in opposite pairs.
+   local spin=math.sin(frame*1.9)
+   local function prop(px,py,direction)
+    local cx=sx+floor(sw*px);local cy=sy+floor(sh*py)
+    local dx=floor(spin*direction*sw*.045)
+    line(cx+dx,cy-1,cx+dx+max(2,floor(sw*.035)),cy-2,c.cream)
+   end
+   prop(.17,.54,1);prop(.84,.61,-1);prop(.19,.81,-1);prop(.85,.86,1)
+  end
+ else
+  local cx=sx+floor(sw/2);local cy=sy+floor(sh/2)
+  local r=max(2,floor(sh*.22))
+  lcd.drawFilledCircle(cx,cy,r,c.ink);rect(cx-r,cy-floor(r*.5),2*r,r,c.yellow)
+  line(cx-r,cy+r,cx-2*r,cy,c.ink);line(cx+r,cy+r,cx+2*r,cy,c.ink)
+ end
+end
+
+local function comicHeader(w,W,y,section,status)
+ local c=comic
+ local sh=select(2,measure("A",SMLSIZE))
+ local badge=min(floor(W*.46),measure(status,SMLSIZE)+12)
+ rect(W-badge-4,y,badge,sh+4,c.yellow)
+ caption(W-badge-4,y+2,badge,status,c.ink,CENTER)
+ local label=W>=340 and ("BOY WONDER  /  "..section) or section
+ caption(6,y+2,W-badge-17,label,c.cream)
+ return y+sh+8
+end
+
+local function comicTiles(x,y,width,height,columns,values)
+ local c=comic
+ local fills={c.yellow,c.mint,c.pink,c.sky,c.cream,c.yellow}
+ local rows=math.ceil(#values/columns);local gap=2
+ local sh=select(2,measure("A",SMLSIZE))
+ for i,v in ipairs(values) do
+  local col=(i-1)%columns;local row=floor((i-1)/columns)
+  local left=x+floor(col*width/columns);local top=y+floor(row*height/rows)
+  local cw=x+floor((col+1)*width/columns)-left-gap
+  local ch=y+floor((row+1)*height/rows)-top-gap
+  rect(left,top,cw,ch,c.cream)
+  if ch>=2*sh+12 then rect(left,top,cw,sh+3,fills[i])
+  else rect(left,top,3,ch,fills[i]) end
+  caption(left+6,top+2,cw-10,v[1],c.deep)
+  local vh=ch-sh-4
+  if vh>=sh then textBox(left+6,top+sh+2,cw-10,vh,v[2],c.ink,0,vh>=31) end
+ end
+end
+
+local function comicDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page,record)
+ local c=comic;local sh=select(2,measure("A",SMLSIZE))
+ rect(0,0,W,H,c.ink)
+ local book=record and w.entry
+ local title=record and (book and "SAVED FLIGHT" or "FLIGHT SUMMARY") or
+  ({"PERFORMANCE","ESSENTIALS","BATTERY","LOGBOOK"})[page]
+ local stamp=record and (book and (book.."/"..#w.recent) or "PACK COMPLETE!") or status
+ local speed=fmt(sv,"%.0f").." "..unit
+ local altitude=fmt(alt,"%.0f")..altUnit
+ local lq=fmt(d.lq,"%.0f%%");local rssi=fmt(d.rssi,"%.0f dBm")
+ local pack=fmt(d.volt,"%.2f V")
+ local small=W<260 or H<160
+ local values
+ if record then
+  values={{"TOP SPEED",speed},{"HIGHEST ALTITUDE",altitude},{"LOWEST LQ",lq},{"LOWEST RSSI",rssi}}
+ elseif page==2 then
+  values={{rep and "TOP SPEED" or "GPS SPEED",speed},{rep and "MAX ALT" or "ALTITUDE",altitude},{rep and "MIN PACK" or "PACK",pack},{rep and "MIN LQ" or "LINK",lq},{"ARM TIME",duration},{rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f W")}}
+ elseif page==3 then
+  local drop=w.firstVolt and w.stats.volt and max(0,w.firstVolt-w.stats.volt)
+  values={{rep and "MIN PACK" or "PACK",pack},{rep and "END VOLTS" or "MIN PACK",fmt(rep and w.endVolt or w.stats.volt,"%.2f V")},{"VOLT DROP",fmt(drop,"%.2f V")},{"CURRENT",fmt(d.amp,"%.1f A")},{"USED",fmt(w.stats.mah,"%.0f mAh")},{"POWER",fmt(d.watts,"%.0f W")}}
+ else
+  values={{rep and "MIN PACK" or "PACK",pack},{rep and "PEAK AMPS" or "CURRENT",fmt(d.amp,"%.1f A")},{rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f W")},{rep and "LOWEST LQ" or "LINK QUALITY",lq},{rep and "LOWEST RSSI" or "RSSI",rssi},{rep and "MAX ALT" or "ALTITUDE",altitude}}
+ end
+ if W<125 or H<5*sh+10 then
+  if W>=55 and H>=sh+3 then
+   caption(2,1,W-4,title,c.yellow)
+   if record then
+    local abbr={"SPD","ALT","LQ","RF"}
+    for i=1,4 do if (i+1)*sh+1<=H then caption(2,i*sh+1,W-4,abbr[i].." "..values[i][2],c.cream) end end
+   elseif H>=2*sh+4 then caption(2,sh+3,W-4,page==4 and (w.total.." FLIGHTS") or speed,c.cream) end
+  end
+  return
+ end
+ local top=comicHeader(w,W,3,title,stamp)
+ local foot=H-sh-3
+ local footer=record and (record.saveStatus or w.logStatus) or (page==4 and w.logStatus or w.aircraft)
+ local hint=record and (book and "NEXT / PREV" or "ENTER / LOGBOOK") or (page==4 and #w.recent>0 and "ENTER / REVIEW FLIGHTS" or (page.."/4"))
+ local hw=measure(hint,SMLSIZE)
+ caption(5,foot,W-hw-17,footer,c.cream)
+ caption(5,foot,W-10,hint,c.yellow,RIGHT)
+ if page==4 and not record then
+  local sf=w.mph and .621371 or 1
+  if small then
+   caption(5,top,W-10,"AIRCRAFT LOGBOOK",c.mint)
+   caption(5,top+sh+2,W-10,w.total.." FLIGHTS  /  "..time(w.totalTime),c.cream)
+   if top+3*sh+4<=foot then caption(5,top+2*sh+4,W-10,w.aircraft,c.pink) end
+   return
+  end
+  local band=max(2*sh+8,floor((foot-top)*.32))
+  comicScene(w,3,top,W-6,band,0)
+  comicPanel(6,top+2,floor(W*.59),band-4,c.yellow)
+  caption(12,top+5,floor(W*.56),"AIRCRAFT LOGBOOK",c.ink)
+  textBox(12,top+sh+5,floor(W*.54),band-sh-10,w.total.." FLIGHTS",c.ink,0,false)
+  local y=top+band+3
+  caption(6,y,W-12,"TOTAL "..time(w.totalTime).."   /   BEST "..fmt(w.allSpeed and w.allSpeed*sf,"%.0f").." "..unit.."   /   "..fmt(w.allPower,"%.0f W"),c.mint)
+  y=y+sh+5
+  if #w.recent==0 then caption(6,y,W-12,"NO FLIGHTS YET",c.cream) end
+  for i=1,min(#w.recent,floor((foot-y-1)/(sh+5))) do
+   local r=w.recent[i];rect(3,y,W-6,sh+3,i%2==1 and c.cream or c.mist)
+   caption(7,y+1,floor(W*.52)-8,r.date:sub(1,16)..(r.partial and "*" or ""),c.ink)
+   caption(floor(W*.52),y+1,floor(W*.48)-7,time(r.duration).."   "..fmt(r.speed and r.speed*sf,"%.0f").." "..unit,c.ink,RIGHT)
+   y=y+sh+5
+  end
+  return
+ end
+ local columns=record and 2 or 3
+ local available=foot-top-3
+ -- Reserve two legible instrument rows before allocating space to the scene.
+ local band=min(floor(available*(record and .33 or .54)),available-2*(2*sh+8))
+ if small or band<28 then
+  if record and available>=2*(2*sh+6) then comicTiles(3,top,W-4,available,2,values)
+  else
+   local lines=record and values or {{page==3 and "PACK" or "SPEED",page==3 and pack or speed},{"ALT",altitude},{"LQ",lq},{"RSSI",rssi}}
+   local n=min(#lines,4)
+   local rh=floor(available/n)
+   if rh>=sh then
+    for i=1,n do local y=top+(i-1)*rh
+     caption(5,y,floor(W*.49)-5,lines[i][1],c.yellow);caption(floor(W*.49),y,floor(W*.51)-5,lines[i][2],c.cream,RIGHT)
+    end
+   else
+    for i=1,n do local col=(i-1)%2;local row=floor((i-1)/2);local half=floor(W/2)
+     if top+(row+1)*sh<=foot then caption(col*half+3,top+row*sh,half-6,lines[i][2],c.cream) end
+    end
+   end
+  end
+  return
+ end
+ local elapsed=w.elapsed or 0
+ local frame=w.state=="FLIGHT" and not w.armUnknown and not w.previewStill and floor(elapsed*8) or 0
+ local landing
+ if record and not book and not w.previewStill and w.landedAt then
+  local age=(getTime()-w.landedAt)/100
+  if age>=0 and age<.85 then landing=age/.85;frame=floor(landing*7) end
+ end
+ comicScene(w,3,top,W-6,band,frame,landing)
+ local left=8;local plateW=floor(W*.45)
+ comicPanel(left+3,top+5,plateW,band-7,c.deep)
+ local bubble=record and c.pink or c.yellow
+ local tip=left+plateW-2;local ty=top+floor(band*.48);local tail=max(6,floor(band*.15))
+ comicPanel(left,top+2,plateW,band-7,bubble)
+ lcd.drawFilledTriangle(tip-1,ty-tail,tip+tail,ty-tail-3,tip-1,ty+2,c.ink)
+ lcd.drawFilledTriangle(tip-2,ty-tail+2,tip+tail-5,ty-tail,tip-2,ty-1,bubble)
+ if not record and w.state=="FLIGHT" and not w.armUnknown and W>=400 and band>=65 then
+  local shout=w.elapsed<1 and "SEND IT!" or ((d.speed or 0)>95 and "WHOOSH!" or nil)
+  if shout then
+   local bw=measure(shout,SMLSIZE)+9;local bx=left+plateW+4
+   rect(bx+2,top+6,bw,sh+3,c.ink);rect(bx,top+4,bw,sh+3,c.cream)
+   caption(bx,top+5,bw,shout,c.ink,CENTER)
+  end
+ end
+ local label=record and "ARM TIME" or (page==3 and "PACK VOLTAGE" or (rep and "TOP GROUND SPEED" or "GPS GROUND SPEED"))
+ local value=record and duration or (page==3 and pack or speed)
+ local x=left+6;local room=plateW-13
+ caption(x,top+5,room,label,c.ink)
+ local timerY=top+band-sh-9
+ local subtitle=record and (record.date:sub(1,16)..(record.partial and " *" or "")) or ("ARM TIME  "..duration)
+ local hasSub=band>=3*sh+20
+ textBox(x,top+sh+6,room,(hasSub and timerY or top+band-7)-(top+sh+6),value,c.ink,0,true)
+ if hasSub then
+  caption(x,timerY,room,subtitle,c.deep)
+  if not record and page==1 and #w.hist>=2 and room>155 then
+   local gx=x+room-46;local gy=timerY+sh-2;local prev=nil
+   for j=max(1,#w.hist-11),#w.hist do
+    local v=w.hist[j];local xx=gx+44-(#w.hist-j)*4
+    if v then
+     local yy=gy-floor(min(1,v/180)*min(sh,10))
+     if prev then line(xx-4,prev,xx,yy,c.deep) end
+     prev=yy
+    else prev=nil end
+   end
+  end
+ end
+ comicTiles(3,top+band+3,W-4,available-band-3,columns,values)
+end
+
 local function refresh(w,event,touch)
  local W,H=w.zone.w,w.zone.h;if event~=nil then W,H=LCD_W,LCD_H end
  if W<1 or H<1 then return end
  local record=w.showSummary and w.report or (w.entry and w.safeInput and w.page==4 and w.recent[w.entry])
- if record then flightReport(w,W,H,record,w.entry);return end
- local rep=w.state=="REPORT";local d=rep and w.stats or w.data
+ if record and w.theme~=9 then flightReport(w,W,H,record,w.entry);return end
+ local rep=w.state=="REPORT";local d=record or (rep and w.stats or w.data)
  local status=w.armSrc==0 and "SET ARM SOURCE" or (w.armUnknown and "ARM UNKNOWN" or (not w.seenSafe and "DISARM TO SYNC" or (rep and "LAST FLIGHT" or (w.state=="FLIGHT" and "ARM INPUT ON" or "STANDBY"))))
  local accent=rep and gold or w.accent
  local sv=d.speed and d.speed*(w.mph and .621371 or 1) or nil
@@ -891,6 +1173,10 @@ local function refresh(w,event,touch)
  local alt=d.alt and d.alt*(w.feet and 3.28084 or 1) or nil;local altUnit=w.feet and " ft" or " m"
  local page=w.page
  if page==4 and not w.safeInput then page=1 end
+ if w.theme==9 then
+  comicDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,record and time(record.duration) or duration,page,record)
+  return
+ end
  if w.theme==8 then
   tailor(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
   return
@@ -902,7 +1188,7 @@ local function refresh(w,event,touch)
  if w.theme==6 and apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page) then return end
  rect(0,0,W,H,bg)
  if W<160 or H<100 then if W>=65 and H>=30 then txt(3,3,"SQ DASH",SMLSIZE,w.accent);txt(3,16,"Larger zone",SMLSIZE,muted) end;return end
- txt(6,3,"SQ / PILOT DASH  1.8.5",SMLSIZE,accent)
+ txt(6,3,"SQ / PILOT DASH  1.8.7",SMLSIZE,accent)
  if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
  line(6,17,W-7,17,border)
  if W>=300 and H>=175 and page~=1 then
@@ -1035,7 +1321,7 @@ refresh=function(w,event,touch)
   elseif prevPage then w.page=(w.page+2)%4+1 end
  end
  draw(w,event,touch)
- if w.page==4 and w.safeInput and not w.showSummary and not w.entry and #w.recent>0 then
+ if w.theme~=9 and w.page==4 and w.safeInput and not w.showSummary and not w.entry and #w.recent>0 then
   local W,H=w.zone.w,w.zone.h
   if event~=nil then W,H=LCD_W,LCD_H end
   local sh=select(2,measure("A",SMLSIZE))
