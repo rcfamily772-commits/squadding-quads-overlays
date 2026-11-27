@@ -1,15 +1,15 @@
-"""Rebuild the offline demo and v1.8.7 SD-card download with the standard library."""
+"""Rebuild the dashboard offline demo and SD-card download with the standard library."""
 import base64
 import io
 import json
 import re
 from pathlib import Path
+from urllib.parse import urljoin
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
-edition = Path(__file__).resolve().parent
-dash = edition.parent
-version = "1.8.7"
-zip_name = f"SQ-Pilot-Dash-v{version}-Boy-Wonder.zip"
+dash = Path(__file__).resolve().parent
+version = "1.8.8"
+zip_name = f"Squadding-Quads-FPV-Dashboard-v{version}.zip"
 site = "https://rcfamily772-commits.github.io/squadding-quads-overlays/"
 lua = dash / "WIDGETS/SQDash/main.lua"
 sprite = lua.with_name("pilot.png")
@@ -31,17 +31,21 @@ def archive(files):
 
 def main():
     radio = {p.relative_to(dash).as_posix(): p.read_bytes() for p in (lua, sprite)}
-    html = (edition / "index.html").read_text()
-    css = (dash / "style.css").read_text() + "\n" + (edition / "comic.css").read_text()
-    html = re.sub(r'<link rel="stylesheet".*?>(?:<link rel="stylesheet".*?>)?', lambda _: "<style>" + css + "</style>", html)
-    html = html.replace('data-dashboard-root="../"', 'data-pilot="' + url_data("image/png", sprite.read_bytes()) + '"')
-    for name, mime in (("pilot.webp", "image/webp"), ("flight.png", "image/png")):
-        html = html.replace(f'src="{name}"', 'src="' + url_data(mime, (edition / name).read_bytes()) + '"')
-    html = html.replace('href="../"', f'href="{site}sq-reactor/"').replace('href="../../tools/"', f'href="{site}tools/"')
-    html = html.replace(f'href="../{zip_name}" download', f'href="{url_data("application/zip", archive(radio))}" download="{zip_name}"')
-    html = html.replace('<a href="Boy-Wonder-Offline.html" download>Offline demo</a> · ', '')
-    html = html.replace('href="report.png"', f'href="{site}sq-reactor/boy-wonder/report.png"')
-    html = html.replace('href="../SQ-Pilot-Dash-v1.8.5', f'href="{site}sq-reactor/SQ-Pilot-Dash-v1.8.5')
+    html = (dash / "index.html").read_text()
+    def embed_style(match):
+        path = match[1].split("?")[0]
+        return "<style>" + (dash / path).read_text() + "</style>"
+    html = re.sub(r'<link rel="stylesheet" href="([^"]+)">', embed_style, html)
+    html = html.replace('data-dashboard-root="./"', 'data-pilot="' + url_data("image/png", sprite.read_bytes()) + '"')
+    for path, mime in (("grand-prix-92/garage.webp", "image/webp"), ("grand-prix-92/performance.png", "image/png")):
+        html = html.replace(f'src="{path}"', 'src="' + url_data(mime, (dash / path).read_bytes()) + '"')
+
+    # The offline file carries its own SD installer. Theme page navigation
+    # opens the published site; the local radio simulator works disconnected.
+    html = html.replace(f'class="zip-link" href="./{zip_name}" download', 'class="zip-link" href="#download-area"')
+    html = html.replace(f'href="./{zip_name}" download', f'href="{url_data("application/zip", archive(radio))}" download="{zip_name}"')
+    html = re.sub(r'<a class="offline-link"[^>]*>[^<]*</a>', '', html)
+    html = re.sub(r'href="(\./[^"]*)"', lambda m: 'href="' + urljoin(site+"sq-reactor/", m[1]) + '"', html)
     worker = (dash / "preview-worker.js").read_text().replace("importScripts('vendor/fengari.js');", (dash / "vendor/fengari.js").read_text())
     js = (dash / "pilot-dash.js").read_text()
     start = js.index("  [source,adapter]=await")
@@ -51,7 +55,7 @@ def main():
           ";\n  worker=new Worker(URL.createObjectURL(new Blob([" + json.dumps(worker) +
           "],{type:'application/javascript'})));\n" + js[end:])
     html = re.sub(r'<script src="[^"]*pilot-dash.js[^"]*"></script>', lambda _: "<script>" + js.replace("</script", "<\\/script") + "</script>", html)
-    offline = edition / "Boy-Wonder-Offline.html"
+    offline = dash / "Squadding-Quads-FPV-Dashboard-Offline.html"
     offline.write_text(html)
     (dash / zip_name).write_bytes(archive({**radio, "README.md": (dash / "README.md").read_bytes(), offline.name: offline.read_bytes()}))
 

@@ -1,21 +1,23 @@
-# SQ Pilot Dash v1.8.7 · Boy Wonder
+# Squadding Quads FPV Dashboard v1.8.8
 
-[Fly the Boy Wonder demo](boy-wonder/) · [Download the radio ZIP](SQ-Pilot-Dash-v1.8.7-Boy-Wonder.zip) · [All themes](./) · [Previous Tailor v1.8.5](SQ-Pilot-Dash-v1.8.5-Tailor.zip)
+[Dashboard](./) · [Download v1.8.8](Squadding-Quads-FPV-Dashboard-v1.8.8.zip) · [Grand Prix ’92](grand-prix-92/) · [Boy Wonder](boy-wonder/)
 
-Theme 9 puts BoyWonderFPV on a freestyle quad above a scrolling Potteries skyline. Arming launches the pilot into the scene. Higher GPS speeds lengthen the streaks. The timer and telemetry stay anchored while the skyline moves. Disarming opens a four-stat comic panel and the existing per-model logbook. Animation runs only when the theme is drawn. The radio loads one 180 × 120 PNG when Theme 9 is selected.
+**Grand Prix ’92 is Theme 10** in the shared dashboard. Its royal-blue, yellow and white cockpit takes inspiration from the 1992 Williams FW14B. The instrument cluster pairs amber speed digits with a calibrated 0–200 km/h arc and a red peak marker. The timer and GPS trace sit beside the dial. Essentials, Battery, Logbook and the four-stat disarm summary share the pit-wall layout. Theme 10 uses the radio’s drawing primitives and requires no artwork on the SD card.
+
+Boy Wonder is Theme 9. Tailor, Nocturne, APEX and the five classic themes are included in the same download.
 
 ## Install or upgrade
 
 1. Extract the ZIP. Copy its **WIDGETS** folder to the root of your radio SD card, merging the folder and replacing `WIDGETS/SQDash/main.lua` and adding `WIDGETS/SQDash/pilot.png`. The two files belong in the same folder.
 2. Restart EdgeTX. Open SQDash settings on your existing widget, or add SQDash to a large colour widget zone.
-3. Select **Theme 9** for Boy Wonder. Theme 8 selects Tailor. Theme 7 selects Nocturne. Theme 6 selects the ice-blue APEX v1.8 design, and themes 1–5 select the classic instrument layouts. New instances default to Tailor.
+3. Select **Theme 10** for Grand Prix ’92 or **Theme 9** for Boy Wonder. Theme 8 selects Tailor. Theme 7 selects Nocturne. Theme 6 selects the ice-blue APEX v1.8 design, and themes 1–5 select the classic instrument layouts. New instances default to Tailor.
 4. Choose a layout and your preferred speed and altitude units. For a first setup, select the arm AUX channel or switch under **ArmSrc** and match its polarity under **ArmHigh**. Verify both positions with the props removed.
 
-The main design target is a 480 × 272 landscape zone on colour EdgeTX 2.11 or later. Larger layouts reflow. The peak rail gives way to the live readings in shallow Performance zones. Very small zones show a compact readout.
+The main design target is a 480 × 272 landscape zone on colour EdgeTX 2.11 or later. Larger layouts reflow. Shallow Performance zones switch from the dial to a grid of readings. Very small zones show a compact readout.
 
 ## Flight displays
 
-- **Performance** places GPS ground speed, a recent speed trace where space permits, and arm time alongside voltage, current, power, link quality, RSSI and altitude. A lower rail shows peaks and observed consumption.
+- **Performance** places GPS ground speed, a recent speed trace where space permits, and arm time alongside voltage, current, power, link quality, RSSI and altitude.
 - **Essentials** uses six larger fields for speed, altitude, voltage, link quality, arm time and power.
 - **Battery** shows live or minimum pack voltage, observed voltage drop from the first armed sample, consumption, current and power.
 - **Logbook** shows per-model flights, total time, best ground speed, peak power and recent entries. The logbook is available with the arm source disarmed.
@@ -32,10 +34,10 @@ The widget uses the existing `/LOGS/SQD_<model filename>.csv` journal. Keep one 
 
 ## Offline preview
 
-Open **Boy-Wonder-Offline.html** from the extracted ZIP in a modern browser. Choose a layout, start a demo flight, adjust the throttle and finish the flight to see the report. Preview settings include screen size, themes, independent units and simulated GPS loss. Demo history stays in the browser. The HTML runs the packaged Lua drawing code against simulated state. Its fonts approximate the radio display. A static design proof is included for viewers that cannot run the interactive preview.
+Open **Squadding-Quads-FPV-Dashboard-Offline.html** from the extracted ZIP in a modern browser. Choose a layout, start a demo flight, adjust the throttle and finish the flight to see the report. Preview settings include screen size, themes, independent units and simulated GPS loss. Demo history stays in the browser. The HTML runs the packaged Lua drawing code against simulated state. Its fonts approximate the radio display. A static design proof is included for viewers that cannot run the interactive preview.
 
 ## Verification
 
 The desktop Lua harness covers disarm from all four layouts, telemetry extrema and units, missing readings, consecutive flights, SD journal round trips and browsing existing records. The browser preview uses simulated telemetry. Physical-radio fit and SD behaviour still need a hardware check.
 
-Run the desktop Lua harness from the repository root with `SQ_DASH_THEME=8 python3 sq-reactor/tests/run-lua.py`. Set the theme to 7 or 6 to check Nocturne or APEX. Run `python3 sq-reactor/tests/run-lua.py sq-reactor/tests/boy-wonder.lua` to check Theme 9.
+Run the desktop Lua harness from the repository root with `SQ_DASH_THEME=8 python3 sq-reactor/tests/run-lua.py`. Set the theme to 7 or 6 to check Nocturne or APEX. Run `python3 sq-reactor/tests/run-lua.py sq-reactor/tests/theme-layouts.lua` for the Grand Prix ’92 and Boy Wonder layouts.

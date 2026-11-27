@@ -1,8 +1,8 @@
--- SQ Pilot Dash v1.8.7 | Boy Wonder | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
+-- Squadding Quads FPV Dashboard v1.8.8 | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
-local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,8,1,9},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,1}}
-local palettes={{67,218,255},{99,234,154},{255,111,75},{229,190,107},{187,137,255},{35,221,250},{216,183,130},{207,164,113},{255,217,50}}
+local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,8,1,10},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,1}}
+local palettes={{67,218,255},{99,234,154},{255,111,75},{229,190,107},{187,137,255},{35,221,250},{216,183,130},{207,164,113},{255,217,50},{255,208,38}}
 local bg=rgb(5,10,17);local panel=rgb(12,22,32);local border=rgb(35,53,66)
 local white=rgb(234,244,250);local muted=rgb(139,163,180);local gold=rgb(235,193,109);local red=rgb(255,107,89)
 local function clamp(v,a,b,d) if type(v)~="number" or v~=v then return d end return max(a,min(b,floor(v))) end
@@ -181,7 +181,7 @@ end
 local function update(w,o)
  if w.reader then close(w.reader);w.reader=nil end
  o=o or {};w.armSrc=clamp(o.ArmSrc,0,65535,0);w.high=o.ArmHigh==nil or o.ArmHigh==1 or o.ArmHigh==true
- w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,9,8);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==nil or o.LogSD==1 or o.LogSD==true
+ w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,10,8);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==nil or o.LogSD==1 or o.LogSD==true
  if w.theme==9 and Bitmap and Bitmap.open then
   if not w.comicPilot then
    local ok,pilot=pcall(Bitmap.open,"/WIDGETS/SQDash/pilot.png")
@@ -1156,11 +1156,193 @@ local function comicDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page,re
  comicTiles(3,top+band+3,W-4,available-band-3,columns,values)
 end
 
+-- Grand Prix '92. The arc and its peak marker use GPS ground speed in km/h.
+local race={
+ blue=rgb(18,53,145),deep=rgb(11,31,82),yellow=rgb(255,208,38),
+ paper=rgb(243,244,237),metal=rgb(193,199,202),ink=rgb(16,23,31),
+ window=rgb(18,28,30),rule=rgb(79,95,99),dim=rgb(172,184,176),
+ amber=rgb(255,191,63),red=rgb(240,77,67)
+}
+local racePages={"PERFORMANCE","ESSENTIALS","BATTERY","LOGBOOK"}
+local raceArc
+
+local function raceHeader(W,sh,title,status)
+ local p=race
+ local h=sh+13
+ rect(0,0,W,h,p.blue)
+ local sw=min(floor(W*.41),measure(status,SMLSIZE)+18)
+ local cut=W-sw-10
+ rect(cut+9,0,sw+1,h-3,p.yellow)
+ lcd.drawFilledTriangle(cut+9,0,cut+9,h-4,cut,h-4,p.yellow)
+ rect(0,h-3,W,3,p.paper)
+ if W>=320 then
+  local brand="GRAND PRIX 92";local bw=measure(brand,SMLSIZE)+16
+  rect(0,0,bw,h-3,p.paper)
+  lcd.drawFilledTriangle(bw,0,bw+9,0,bw,h-4,p.paper)
+  caption(5,4,bw-7,brand,p.deep)
+  caption(bw+14,4,cut-bw-17,title,p.paper)
+ else caption(5,4,cut-10,title,p.paper) end
+ caption(cut+10,4,sw-3,status,p.ink,CENTER)
+ return h
+end
+
+local function raceDial(x,y,W,H,speed,peak,sv,unit,sh)
+ local p=race
+ rect(x,y,W,H,p.window)
+ caption(x+6,y+3,W-12,"GPS GROUND SPEED",p.paper)
+ if not raceArc then
+  raceArc={}
+  for i=0,36 do
+   local a=math.pi+i*math.pi/36
+   raceArc[i]={math.cos(a),math.sin(a)}
+  end
+ end
+ local cx=x+floor(W/2);local cy=y+H-sh-5
+ local rx=floor(W*.44);local ry=cy-y-sh-8
+ local lit=speed and min(36,floor(speed*36/200)) or -1
+ local peakTick=peak and min(36,floor(peak*36/200+.5))
+ for i=0,36 do
+  local t=raceArc[i];local major=i%6==0
+  local inner=major and .76 or .86
+  local X=cx+floor(t[1]*rx);local Y=cy+floor(t[2]*ry)
+  local col=i<=lit and p.amber or (major and p.metal or p.rule)
+  line(cx+floor(t[1]*rx*inner),cy+floor(t[2]*ry*inner),X,Y,col)
+  if major then line(cx+1+floor(t[1]*rx*inner),cy+floor(t[2]*ry*inner),X+1,Y,col) end
+  if i==peakTick then rect(X-2,Y-2,5,4,p.red) end
+ end
+ local digits=fmt(sv,"%.0f")
+ local dh=min(floor((W*.55)*48/(#digits*34-6)),floor(ry*.62))
+ numerals(cx,cy-dh,digits,max(8,dh),p.amber)
+ caption(x+5,cy+1,W-10,"0",p.dim)
+ caption(x+5,cy+1,W-10,unit,p.paper,CENTER)
+ caption(x+5,cy+1,W-10,unit=="mph" and "124" or "200",p.dim,RIGHT)
+end
+
+local function raceFields(x,y,W,H,cols,fields,sh,paper)
+ local p=race;local rows=math.ceil(#fields/cols)
+ for i,v in ipairs(fields) do
+  local col=(i-1)%cols;local row=floor((i-1)/cols)
+  local left=x+floor(col*W/cols);local top=y+floor(row*H/rows)
+  local cw=x+floor((col+1)*W/cols)-left-2
+  local ch=y+floor((row+1)*H/rows)-top-2
+  rect(left,top,cw,ch,paper and p.paper or p.window)
+  rect(left,top,3,ch,paper and p.blue or p.rule)
+  local ink=paper and p.ink or p.amber
+  caption(left+6,top+2,cw-10,v[1],paper and p.blue or p.dim)
+  local vh=ch-sh-5
+  if vh>=sh then
+   local height=min(vh,select(2,measure("0",DBLSIZE)))
+   textBox(left+6,top+sh+3+floor((vh-height)/2),cw-10,height,v[2],ink,0,true)
+  end
+ end
+end
+
+local function raceDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page,r)
+ local p=race;local sh=select(2,measure("A",SMLSIZE))
+ rect(0,0,W,H,p.deep)
+ local entry=r and w.entry
+ local title=r and (entry and "SAVED FLIGHT" or "FLIGHT SUMMARY") or racePages[page]
+ local stamp=entry and (entry.."/"..#w.recent) or status
+ local speed=fmt(sv,"%.0f").." "..unit;local altitude=fmt(alt,"%.0f")..altUnit
+ local lq=fmt(d.lq,"%.0f%%");local rssi=fmt(d.rssi,"%.0f dBm")
+ local volts=fmt(d.volt,"%.2f V");local amps=fmt(d.amp,"%.1f A");local watts=fmt(d.watts,"%.0f W")
+ local sf=w.mph and .621371 or 1
+ local best=fmt(w.allSpeed and w.allSpeed*sf,"%.0f").." "..unit
+ local fields
+ if r then fields={{"TOP SPEED",speed},{"HIGHEST ALTITUDE",altitude},{"LOWEST LQ",lq},{"LOWEST RSSI",rssi}}
+ elseif page==2 then fields={{rep and "TOP SPEED" or "GPS SPEED",speed},{rep and "MAX ALT" or "ALTITUDE",altitude},{rep and "MIN PACK" or "PACK",volts},{rep and "MIN LINK" or "LINK QUALITY",lq},{"ARM TIME",duration},{rep and "PEAK POWER" or "POWER",watts}}
+ elseif page==3 then
+  local drop=w.firstVolt and w.stats.volt and max(0,w.firstVolt-w.stats.volt)
+  fields={{rep and "MIN PACK" or "PACK",volts},{rep and "END VOLTS" or "MIN PACK",fmt(rep and w.endVolt or w.stats.volt,"%.2f V")},{"PACK DROP",fmt(drop,"%.2f V")},{rep and "PEAK AMPS" or "CURRENT",amps},{"USED",fmt(w.stats.mah,"%.0f mAh")},{rep and "PEAK POWER" or "POWER",watts}}
+ elseif page==4 then fields={{"FLIGHTS",tostring(w.total)},{"TOTAL TIME",time(w.totalTime)},{"BEST SPEED",best},{"PEAK POWER",fmt(w.allPower,"%.0f W")}}
+ else fields={{rep and "MIN PACK" or "PACK",volts},{rep and "PEAK AMPS" or "CURRENT",amps},{rep and "PEAK POWER" or "POWER",watts},{rep and "MIN LINK" or "LINK QUALITY",lq},{rep and "MIN RSSI" or "RSSI",rssi},{rep and "MAX ALT" or "ALTITUDE",altitude}} end
+ -- Small zones use a timing strip with real readings and the same livery.
+ if W<220 or H<9*sh+26 then
+  if W<50 or H<sh+2 then return end
+  rect(0,0,W,sh+2,p.yellow);caption(3,1,W-6,title,p.ink)
+  local y=sh+4
+  if not r and page==1 and y+sh<=H then caption(3,y,W-6,speed.."   "..duration,p.paper);y=y+sh+2 end
+  for i,v in ipairs(fields) do
+   if y+sh>H then break end
+   local label=v[1];if W<120 then label=(r and ({"SPD","ALT","LQ","RF"})[i]) or label:sub(1,3) end
+   if W>=140 then
+    caption(3,y,floor(W*.46)-4,label,p.dim);caption(floor(W*.46),y,floor(W*.54)-3,v[2],p.paper,RIGHT)
+   else caption(3,y,W-6,label.." "..v[2],p.paper) end
+   y=y+sh+1
+  end
+  return
+ end
+ local head=raceHeader(W,sh,title,stamp)
+ local foot=H-sh-5;local left=4;local top=head+4;local inner=W-2*left
+ local note=r and (r.saveStatus or w.logStatus) or (page==4 and w.logStatus or w.aircraft)
+ if not r and page~=4 then
+  if w.armUnknown then note="CHECK ARM SOURCE" elseif w.gap then note="PARTIAL / SAMPLE GAP" end
+ end
+ local hint=r and (entry and "NEXT / PREV" or "ENTER / LOGBOOK") or (page==4 and #w.recent>0 and "ENTER / REVIEW FLIGHTS" or (page.." / 4"))
+ local hw=measure(hint,SMLSIZE)
+ rect(0,foot-2,W,2,p.yellow)
+ caption(left,foot+1,inner-hw-8,note,p.paper)
+ caption(left,foot+1,inner,hint,p.yellow,RIGHT)
+ local height=foot-top-4
+ if r then
+  local bh=sh+10
+  rect(left,top,inner,bh,p.ink)
+  caption(left+6,top+4,floor(inner*.62),r.date:sub(1,16)..(r.partial and " *" or ""),p.paper)
+  caption(left+floor(inner*.59),top+4,floor(inner*.41)-6,"ARM  "..duration,p.amber,RIGHT)
+  raceFields(left,top+bh+3,inner+2,height-bh-3,2,fields,sh,true)
+ elseif page==4 then
+  local band=min(floor(height*.36),sh*4+6)
+  rect(left,top,inner,band,p.yellow)
+  local half=floor(inner*.5)
+  caption(left+7,top+2,half-10,"FLIGHTS LOGGED",p.deep)
+  textBox(left+7,top+sh+3,half-12,band-sh-4,tostring(w.total),p.ink,0,true)
+  rect(left+half,top,inner-half,band,p.window)
+  caption(left+half+6,top+2,half-12,"BEST GROUND SPEED",p.dim)
+  textBox(left+half+6,top+sh+3,half-12,band-sh-4,best,p.amber,0,true)
+  local y=top+band+4
+  caption(left+3,y,inner-6,"TOTAL "..time(w.totalTime).."   /   PEAK "..fmt(w.allPower,"%.0f W"),p.paper)
+  y=y+sh+5
+  if #w.recent==0 then caption(left+3,y,inner-6,"NO FLIGHTS YET",p.metal) end
+  for i=1,min(#w.recent,floor((foot-y-3)/(sh+6))) do
+   local row=w.recent[i]
+   rect(left,y,inner,sh+4,i%2==1 and p.paper or p.metal)
+   caption(left+4,y+1,half-5,row.date:sub(1,16)..(row.partial and "*" or ""),p.deep)
+   caption(left+half,y+1,inner-half-4,time(row.duration).."  "..fmt(row.speed and row.speed*sf,"%.0f").." "..unit,p.ink,RIGHT)
+   y=y+sh+6
+  end
+ elseif page==1 and height>=7*sh+60 then
+  local band=min(floor(height*.58),height-2*(2*sh+8)-3)
+  local dw=floor(inner*.59);local sx=left+dw+3;local sw=inner-dw-3
+  raceDial(left,top,dw,band,d.speed,w.stats.speed,sv,unit,sh)
+  local timerH=floor(band*.56)
+  rect(sx,top,sw,timerH,p.yellow)
+  caption(sx+6,top+3,sw-12,"ARM TIME",p.deep)
+  textBox(sx+6,top+sh+5,sw-12,timerH-sh-6,duration,p.ink,0,true)
+  local ty=top+timerH+2;local th=band-timerH-2
+  rect(sx,ty,sw,th,p.window);caption(sx+6,ty+2,sw-12,"SPEED TRACE",p.dim)
+  if th>sh+12 then trace(w,sx+6,ty+sh+5,sw-12,th-sh-9,p.amber,p.rule) end
+  raceFields(left,top+band+3,inner+2,height-band-3,3,fields,sh,true)
+ else
+  if page==1 then fields={{"GPS SPEED",speed},{"ARM TIME",duration},{"PACK",volts},{"LINK QUALITY",lq},{"RSSI",rssi},{"ALTITUDE",altitude}} end
+  if page==3 then
+   local bh=min(2*sh+4,height-2*(2*sh+7))
+   if bh>=sh+4 then
+    rect(left,top,inner,bh,p.yellow)
+    local cell=w.cells>0 and d.volt and d.volt/w.cells
+    caption(left+6,top+floor((bh-sh)/2),inner-12,w.cells>0 and (w.cells.."S   /   "..fmt(cell,"%.2f V/cell")) or "PACK TELEMETRY",p.ink)
+    top=top+bh+3;height=height-bh-3
+   end
+  end
+  local cols=height>=3*(2*sh+8) and 2 or 3
+  raceFields(left,top,inner+2,height,cols,fields,sh,page~=3)
+ end
+end
+
 local function refresh(w,event,touch)
  local W,H=w.zone.w,w.zone.h;if event~=nil then W,H=LCD_W,LCD_H end
  if W<1 or H<1 then return end
  local record=w.showSummary and w.report or (w.entry and w.safeInput and w.page==4 and w.recent[w.entry])
- if record and w.theme~=9 then flightReport(w,W,H,record,w.entry);return end
+ if record and w.theme<9 then flightReport(w,W,H,record,w.entry);return end
  local rep=w.state=="REPORT";local d=record or (rep and w.stats or w.data)
  local status=w.armSrc==0 and "SET ARM SOURCE" or (w.armUnknown and "ARM UNKNOWN" or (not w.seenSafe and "DISARM TO SYNC" or (rep and "LAST FLIGHT" or (w.state=="FLIGHT" and "ARM INPUT ON" or "STANDBY"))))
  local accent=rep and gold or w.accent
@@ -1173,6 +1355,10 @@ local function refresh(w,event,touch)
  local alt=d.alt and d.alt*(w.feet and 3.28084 or 1) or nil;local altUnit=w.feet and " ft" or " m"
  local page=w.page
  if page==4 and not w.safeInput then page=1 end
+ if w.theme==10 then
+  raceDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,record and time(record.duration) or duration,page,record)
+  return
+ end
  if w.theme==9 then
   comicDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,record and time(record.duration) or duration,page,record)
   return
@@ -1188,7 +1374,7 @@ local function refresh(w,event,touch)
  if w.theme==6 and apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page) then return end
  rect(0,0,W,H,bg)
  if W<160 or H<100 then if W>=65 and H>=30 then txt(3,3,"SQ DASH",SMLSIZE,w.accent);txt(3,16,"Larger zone",SMLSIZE,muted) end;return end
- txt(6,3,"SQ / PILOT DASH  1.8.7",SMLSIZE,accent)
+ txt(6,3,"SQ / FPV DASHBOARD  1.8.8",SMLSIZE,accent)
  if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
  line(6,17,W-7,17,border)
  if W>=300 and H>=175 and page~=1 then
@@ -1321,7 +1507,7 @@ refresh=function(w,event,touch)
   elseif prevPage then w.page=(w.page+2)%4+1 end
  end
  draw(w,event,touch)
- if w.theme~=9 and w.page==4 and w.safeInput and not w.showSummary and not w.entry and #w.recent>0 then
+ if w.theme<9 and w.page==4 and w.safeInput and not w.showSummary and not w.entry and #w.recent>0 then
   local W,H=w.zone.w,w.zone.h
   if event~=nil then W,H=LCD_W,LCD_H end
   local sh=select(2,measure("A",SMLSIZE))

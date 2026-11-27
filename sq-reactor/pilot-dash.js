@@ -13,6 +13,8 @@ const duration=v=>String(Math.floor(v/60)).padStart(2,"0")+":"+String(Math.floor
 function saveDemo(){const n=flightAircraft;const r={date:new Date().toISOString(),duration:elapsed,...stats,avg:speedN?speedSum/speedN:null,endV:endVolt,partial:gpsMissing};Object.defineProperty(logs,n,{value:[r,...rowsFor(n)].slice(0,500),writable:true,enumerable:true,configurable:true});try{localStorage.setItem(storageKey,JSON.stringify(logs));storeOK=true;}catch(e){storeOK=false;}}
 const extrema={watts:Math.max,speed:Math.max,volt:Math.min,amp:Math.max,lq:Math.min,rssi:Math.min,alt:Math.max,mah:Math.max};
 const canvas=$('lcd'),ctx=canvas.getContext('2d');
+const selectedTheme=new URLSearchParams(location.search).get('theme');
+if([...$('palette').options].some(option=>option.value===selectedTheme))$('palette').value=selectedTheme;
 const root=new URL(document.body.dataset.dashboardRoot||'./',document.baseURI);
 const pilot=new Image();
 pilot.src=document.body.dataset.pilot||new URL('WIDGETS/SQDash/pilot.png',root).href;
@@ -48,7 +50,7 @@ function render(){
  const report=mode==='report',rows=rowsFor(name()),valid=rows.filter(r=>r&&Number.isFinite(r.duration));
  const complete=valid.filter(r=>!r.partial),maxOf=k=>{const a=complete.map(r=>r[k]).filter(Number.isFinite);return a.length?Math.max(...a):null;};
  const [width,height]=$('size').value.split('x').map(Number);
- const theme=+$('palette').value,colors=['43daff','63ea9a','ff6f4b','e5be6b','bb89ff','62dae7','d8b782','cfa471','ffd932'],hex=colors[theme-1];
+ const theme=+$('palette').value,colors=['43daff','63ea9a','ff6f4b','e5be6b','bb89ff','62dae7','d8b782','cfa471','ffd932','ffd026'],hex=colors[theme-1];
  if(page===4&&mode==='flight')page=1;
  const snap={clock:Math.floor(performance.now()/10),landedAt,still:reduceMotion.matches,width,height,theme,showSummary,entry,mph:$('units').value==='mph',feet:$('altUnits').value==='ft',page,aircraft:name(),state:report?'REPORT':mode==='flight'?'FLIGHT':'READY',elapsed,flights:packs,newBest,bestSpeed:best,bestTime:null,bestAmp:null,firstVolt,endVolt,
   total:valid.length,totalTime:valid.reduce((t,r)=>t+r.duration,0),allSpeed:maxOf('speed'),allPower:maxOf('watts'),allTime:maxOf('duration'),logStatus:storeOK?'LOCAL DEMO HISTORY':'MEMORY ONLY / STORAGE UNAVAILABLE',gap:false,speedMissing:gpsMissing,armUnknown:false,seenSafe:true,safeInput:mode!=='flight',r:parseInt(hex.slice(0,2),16),g:parseInt(hex.slice(2,4),16),b:parseInt(hex.slice(4,6),16),
@@ -63,13 +65,13 @@ function render(){
  document.querySelectorAll('[data-page]').forEach(b=>{b.setAttribute('aria-pressed',String(!showSummary&&+b.dataset.page===page));b.disabled=mode==='flight';});
  $('pageHelp').textContent=mode==='flight'?'Finish the demo flight to change layout.':showSummary?'The four readings are frozen. Open Logbook to review this flight.':entry?'Browse the most recent eight flights for this aircraft.':'Choose a layout, start a demo flight, then finish it to see the summary.';
  $('screenSize').textContent=width+' × '+height+' px';
- canvas.setAttribute('aria-label',`SQ Pilot Dash ${['','Performance','Essentials','Battery','Logbook'][page]} with simulated telemetry. ${mode==='flight'?'Demo flight running.':showSummary?'Flight summary with top speed, highest altitude, lowest link quality and lowest RSSI.':entry?'Saved flight details.':report?'Frozen last flight report.':'Standby.'}`);
+ canvas.setAttribute('aria-label',`Squadding Quads FPV Dashboard ${['','Performance','Essentials','Battery','Logbook'][page]} with simulated telemetry. ${mode==='flight'?'Demo flight running.':showSummary?'Flight summary with top speed, highest altitude, lowest link quality and lowest RSSI.':entry?'Saved flight details.':report?'Frozen last flight report.':'Standby.'}`);
  send(snap);
 }
 async function init(){
  try{
   [source,adapter]=await Promise.all(['WIDGETS/SQDash/main.lua','preview-runtime.lua'].map(async u=>{const r=await fetch(new URL(u,root),{cache:'no-cache'});if(!r.ok)throw Error('could not load renderer');return r.text();}));
-  worker=new Worker(new URL('preview-worker.js?v=1.8.7',root));
+  worker=new Worker(new URL('preview-worker.js?v=1.8.8',root));
   worker.onerror=e=>fail(e.message||'worker error');
   worker.onmessage=({data})=>{
    clearTimeout(deadline);busy=false;if(data.error){fail(data.error);return;}
@@ -105,7 +107,7 @@ function stepEntry(direction){
 $('older').onclick=()=>stepEntry(1);
 $('newer').onclick=()=>stepEntry(-1);
 $('size').onchange=render;$('throttle').oninput=()=>{$('throttleValue').textContent=$('throttle').value+'%';};
-$('exportLog').onclick=()=>{const fields=['date','duration','speed','avg','alt','volt','amp','watts','mah','lq','rssi','endV','partial'];const csv=fields.join(',')+'\n'+rowsFor(name()).map(r=>fields.map(k=>r[k]??'').join(',')).join('\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='SQ_Pilot_Dash_demo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
+$('exportLog').onclick=()=>{const fields=['date','duration','speed','avg','alt','volt','amp','watts','mah','lq','rssi','endV','partial'];const csv=fields.join(',')+'\n'+rowsFor(name()).map(r=>fields.map(k=>r[k]??'').join(',')).join('\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='Squadding-Quads-FPV-Dashboard-demo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
 setInterval(()=>{if(mode==='flight'){sample(performance.now());render();}else if(showSummary&&+$('palette').value===9&&performance.now()/10-landedAt<110){render();}},125);
 init();
 })();
