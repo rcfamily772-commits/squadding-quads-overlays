@@ -1,4 +1,6 @@
 -- Run with Lua 5.3+ from repository root. LCD/font metrics are approximations.
+-- Some radio builds expose string.* without installing a string metatable.
+debug.setmetatable("", nil)
 SOURCE,BOOL,VALUE=1,2,3
 SMLSIZE,MIDSIZE,DBLSIZE,XXLSIZE=0x02000000,0x04000000,0x08000000,0x10000000
 CENTER,RIGHT,SOLID=0x40000000,0x20000000,0
@@ -41,6 +43,16 @@ function lcd.drawCircle(x,y,r,c) pt(x-r,y-r);pt(x+r,y+r);emit('drawCircle',x,y,r
 function lcd.drawFilledTriangle(x,y,X,Y,xx,yy,c) pt(x,y);pt(X,Y);pt(xx,yy);emit('drawFilledTriangle',x,y,X,Y,xx,yy,c) end
 local api=assert(loadfile('sq-reactor/WIDGETS/SQDash/main.lua'))()
 assert(api.create({w=W,h=H},{}).theme==8, "new widget must default to Tailor")
+-- The unchanged journal naming must survive both raw and qualified model filenames.
+local modelInfo=model.getInfo
+local function pathFor(file)
+ model.getInfo=function() return {name="V15 model",filename=file} end
+ return api.create({w=W,h=H},{}).logPath
+end
+assert(pathFor("model1.yml")=="/LOGS/SQD_model1.yml.csv")
+assert(pathFor("/MODELS/SQ Freestyle-5.yml")=="/LOGS/SQD_SQ Freestyle-5.yml.csv")
+assert(pathFor(nil)==nil and pathFor("")==nil and pathFor("bad?.yml")==nil)
+model.getInfo=modelInfo
 local function setup()
  tick=tick+20;arm=-1024
  local w=api.create({w=W,h=H},{ArmSrc=1,ArmHigh=1,Theme=theme,Cells=6})
@@ -81,7 +93,7 @@ w=api.create({w=W,h=H},{Theme=theme});draw(w);assert(labels['SET ARM SOURCE'])
 local desktopIO=io
 local path="/LOGS/SQD_model1.yml.csv"
 local legacy="SQ14,2026-11-25 10:00:00,20,55,-,-12,-,-,-,-,55,-103,-,0,END\n"
-local files={[path]=legacy:rep(18)}
+local files={[path]=string.rep(legacy,18)}
 local appends=0
 local failOpen=false
 io={
@@ -90,7 +102,7 @@ io={
   return {name=name,pos=1}
  end,
  read=function(f,n)
-  local chunk=files[f.name]:sub(f.pos,f.pos+n-1);f.pos=f.pos+#chunk;return chunk
+  local chunk=string.sub(files[f.name],f.pos,f.pos+n-1);f.pos=f.pos+#chunk;return chunk
  end,
  write=function(f,...)
   files[f.name]=(files[f.name] or "")..table.concat({...});appends=appends+1;return f
@@ -157,7 +169,7 @@ W,H=480,272
 -- Export reproducible primitive recordings for the design proof; not photographs.
 local out=io.open(theme==8 and '/tmp/sq-tailor-frames.json' or theme==7 and '/tmp/sq-nocturne-frames.json' or '/tmp/sq-apex-frames.json','w');out:write('[')
 local function json(v)
- if type(v)=='string' then return string.format('%q',v):gsub('\\\n','\\n') end
+ if type(v)=='string' then return string.gsub(string.format('%q',v),'\\\n','\\n') end
  if type(v)=='number' then return tostring(v) end
  local a={};for _,x in ipairs(v) do a[#a+1]=json(x) end;return '['..table.concat(a,',')..']'
 end

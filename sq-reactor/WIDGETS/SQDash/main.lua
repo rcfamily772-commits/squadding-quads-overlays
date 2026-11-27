@@ -1,4 +1,4 @@
--- Squadding Quads FPV Dashboard v1.8.8 | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
+-- Squadding Quads FPV Dashboard v1.8.9 | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
 local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,8,1,10},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,1}}
@@ -52,8 +52,8 @@ local function modelId(w)
  if not ok or type(t)~="table" then return end
  w.aircraft=type(t.name)=="string" and t.name or "Aircraft"
  local id=t.filename
- if type(id)=="string" then id=id:match("([^/]+)$") end
- if type(id)=="string" and #id<=64 and id:match("^[%w_. %-]+$") then w.logPath="/LOGS/SQD_"..id..".csv" end
+ if type(id)=="string" then id=string.match(id,"([^/]+)$") end
+ if type(id)=="string" and #id<=64 and string.match(id,"^[%w_. %-]+$") then w.logPath="/LOGS/SQD_"..id..".csv" end
 end
 local function accept(w,r,fromSD)
  w.total=w.total+1;w.totalTime=w.totalTime+r.duration
@@ -70,7 +70,7 @@ local function accept(w,r,fromSD)
  if #w.recent>8 then table.remove(w.recent) end
 end
 local function decode(w,line)
- local a={};for v in (line..","):gmatch("(.-),") do a[#a+1]=v end
+ local a={};for v in string.gmatch(line..",", "(.-),") do a[#a+1]=v end
  if #a~=15 or a[1]~="SQ14" or a[15]~="END" then return end
  local d=tonumber(a[3]);if not d or d<0 or d>86400 then return end
  accept(w,{date=a[2],duration=d,speed=tonumber(a[4]),avg=tonumber(a[5]),alt=tonumber(a[6]),volt=tonumber(a[7]),amp=tonumber(a[8]),watts=tonumber(a[9]),mah=tonumber(a[10]),lq=tonumber(a[11]),rssi=tonumber(a[12]),endV=tonumber(a[13]),partial=a[14]~="0"},true)
@@ -92,8 +92,14 @@ local function readLog(w)
  w.bytes=w.bytes+#b
  if w.bytes>262144 then close(w.reader);w.reader=nil;w.loaded=true;w.logBlocked=true;w.logStatus="ARCHIVE CSV / SIZE LIMIT";return end
  local all=w.buffer..b;local pos=1
- while true do local n=all:find("\n",pos,true);if not n then break end;decode(w,all:sub(pos,n-1):gsub("\r$",""));pos=n+1 end
- w.buffer=all:sub(pos);if #w.buffer>512 then w.buffer="" end
+ while true do
+  local n=string.find(all,"\n",pos,true)
+  if not n then break end
+  local line=string.sub(all,pos,n-1)
+  decode(w,string.gsub(line,"\r$",""))
+  pos=n+1
+ end
+ w.buffer=string.sub(all,pos);if #w.buffer>512 then w.buffer="" end
 end
 local function saveLog(w)
  if #w.pending==0 then return end
@@ -229,7 +235,7 @@ local function textBox(x,y,W,H,s,c,align,big)
 end
 local function caption(x,y,W,s,c,align)
  local tw=measure(s,SMLSIZE)
- while tw>W and #s>1 do s=s:sub(1,-2);tw=measure(s,SMLSIZE) end
+ while tw>W and #s>1 do s=string.sub(s,1,-2);tw=measure(s,SMLSIZE) end
  txt(align==CENTER and x+floor(W/2) or (align==RIGHT and x+W or x),y,s,SMLSIZE+(align or 0),c or apexMuted)
 end
 local function numerals(cx,y,s,h,c)
@@ -241,8 +247,8 @@ local function numerals(cx,y,s,h,c)
  local shapes={a={4,0,24,0,21,5,7,5},g={7,21,21,21,25,24,21,27,7,27,3,24},d={7,43,21,43,24,48,4,48},
  b={23,6,28,2,28,21,23,24},c={23,26,28,29,28,46,23,42},e={0,29,5,26,5,42,0,46},f={0,2,5,6,5,24,0,21}}
  for i=1,#s do
-  local ch=s:sub(i,i);local n=tonumber(ch);local segments=n and apexDigits[n+1] or "g"
-  for j=1,#segments do polygon(shapes[segments:sub(j,j)]) end
+  local ch=string.sub(s,i,i);local n=tonumber(ch);local segments=n and apexDigits[n+1] or "g"
+  for j=1,#segments do polygon(shapes[string.sub(segments,j,j)]) end
   x=x+34*scale
  end
 end
@@ -255,7 +261,7 @@ local function apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
  -- Brand and state share one calm header; model names are measured and clipped.
  rect(m,7,25,18,a);txt(m+3,8,"SQ",SMLSIZE,apexBg)
  local chip=min(154,floor(W*.34));local chipX=W-m-chip
- caption(43,8,chipX-51,w.aircraft:upper(),apexWhite)
+ caption(43,8,chipX-51,string.upper(w.aircraft),apexWhite)
  local sc=(w.armUnknown or not w.seenSafe) and red or a
  rect(chipX,6,chip,20,rep and rgb(44,34,20) or apexPanel)
  caption(chipX+4,8,chip-8,status,sc,CENTER)
@@ -291,7 +297,7 @@ local function apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
   tile(m,y+2*(th+gap),side,th,rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f"),"W")
   tile(right,y,side,th,rep and "MIN LINK" or "LINK",fmt(d.lq,"%.0f"),"%")
   tile(right,y+th+gap,side,th,rep and "MIN RSSI" or "RSSI",fmt(d.rssi,"%.0f"),"dBm")
-  tile(right,y+2*(th+gap),side,th,rep and "MAX ALT" or "ALTITUDE",fmt(alt,"%.0f"),altUnit:gsub(" ",""))
+  tile(right,y+2*(th+gap),side,th,rep and "MAX ALT" or "ALTITUDE",fmt(alt,"%.0f"),string.gsub(altUnit," ",""))
   caption(mid,y+1,center,rep and "PEAK GROUND SPEED" or "GPS GROUND SPEED",apexMuted,CENTER)
   local digits=fmt(sv,"%03.0f");local nh=min(rich and 64 or 43,floor(h*.42),floor((center-18)*48/(#digits*34-6)))
   local ny=y+smallH+8
@@ -308,7 +314,7 @@ local function apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
   textBox(mid+65,y+h-timerH,center-68,timerH,duration,apexWhite,CENTER,false)
   -- Arm time label shares the rail; units always remain attached to values.
   local rw=floor((W-2*m-2*gap)/3)
-  local vals={{"PEAK SPEED",fmt(w.stats.speed and w.stats.speed*sf,"%.0f"),unit},{"PEAK ALT",fmt(w.stats.alt and w.stats.alt*(w.feet and 3.28084 or 1),"%.0f"),altUnit:gsub(" ","")},{"USED",fmt((rep or w.state=="FLIGHT") and w.stats.mah or nil,"%.0f"),"mAh"}}
+  local vals={{"PEAK SPEED",fmt(w.stats.speed and w.stats.speed*sf,"%.0f"),unit},{"PEAK ALT",fmt(w.stats.alt and w.stats.alt*(w.feet and 3.28084 or 1),"%.0f"),string.gsub(altUnit," ","")},{"USED",fmt((rep or w.state=="FLIGHT") and w.stats.mah or nil,"%.0f"),"mAh"}}
   for i,v in ipairs(vals) do
    local x=m+(i-1)*(rw+gap);line(x,railY,x+rw-1,railY,rep and a or apexLine)
    caption(x+3,railY+4,rw-6,v[1],rep and a or apexMuted)
@@ -322,7 +328,7 @@ local function apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
   caption(m,header+5,W-2*m,page==2 and "ESSENTIALS" or "BATTERY / OBSERVED",a)
   local y=header+smallH+12;local tw=floor((W-2*m-gap)/2);local th=floor((H-footer-y-2*gap-4)/3)
   local values
-  if page==2 then values={{rep and "PEAK GROUND SPEED" or "GPS GROUND SPEED",fmt(sv,"%.0f"),unit},{rep and "MAX ALTITUDE" or "ALTITUDE",fmt(alt,"%.0f"),altUnit:gsub(" ","")},{rep and "MIN PACK" or "PACK VOLTAGE",fmt(d.volt,"%.2f"),"V"},{rep and "MIN LINK" or "LINK QUALITY",fmt(d.lq,"%.0f"),"%"},{"ARM TIME",duration,""},{rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f"),"W"}}
+  if page==2 then values={{rep and "PEAK GROUND SPEED" or "GPS GROUND SPEED",fmt(sv,"%.0f"),unit},{rep and "MAX ALTITUDE" or "ALTITUDE",fmt(alt,"%.0f"),string.gsub(altUnit," ","")},{rep and "MIN PACK" or "PACK VOLTAGE",fmt(d.volt,"%.2f"),"V"},{rep and "MIN LINK" or "LINK QUALITY",fmt(d.lq,"%.0f"),"%"},{"ARM TIME",duration,""},{rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f"),"W"}}
   else
    local sag=w.firstVolt and w.stats.volt and max(0,w.firstVolt-w.stats.volt) or nil
    values={{rep and "MIN PACK" or "LIVE PACK",fmt(d.volt,"%.2f"),"V"},{rep and "LAST ARMED VOLT" or "MIN PACK",fmt(rep and w.endVolt or w.stats.volt,"%.2f"),"V"},{"DROP FROM FIRST",fmt(sag,"%.2f"),"V"},{rep and "PEAK CURRENT" or "CURRENT",fmt(d.amp,"%.1f"),"A"},{"OBSERVED CAPACITY",fmt((rep or w.state=="FLIGHT") and w.stats.mah or nil,"%.0f"),"mAh"},{rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f"),"W"}}
@@ -343,7 +349,7 @@ local function apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
    for i=1,rows do
     local r=w.recent[i];local yy2=yy+(i-1)*(smallH+7)
     if i%2==1 then rect(m,yy2-1,W-2*m,smallH+5,apexPanel) end
-    caption(m+5,yy2,floor(W*.51),r.date:sub(1,16)..(r.partial and "*" or ""),apexWhite)
+    caption(m+5,yy2,floor(W*.51),string.sub(r.date,1,16)..(r.partial and "*" or ""),apexWhite)
     caption(floor(W*.54),yy2,floor(W*.46)-m-5,time(r.duration).." / "..fmt(r.speed and r.speed*sf,"%.0f").." "..unit,a,RIGHT)
    end
   end
@@ -388,23 +394,23 @@ local function dialFigures(x,y,h,value,face,ink,missingInk)
   local scale=h/64
   local advance=floor((face==figures and 49 or 46)*scale+.5)
   for i=1,#value do
-    local digit=tonumber(value:sub(i,i))
+    local digit=tonumber(string.sub(value,i,i))
     local glyph=digit and face[digit+1]
     if glyph then
       local points,faces=glyph[1],glyph[2]
       local function point(v)
         local offset=(v-36)*2+1
-        local px,py=points:byte(offset,offset+1)
+        local px,py=string.byte(points,offset,offset+1)
         return x+floor((px-35)*scale+.5),y+floor((py-35)*scale+.5)
       end
       for j=1,#faces,3 do
-        local a,b,c=faces:byte(j,j+2)
+        local a,b,c=string.byte(faces,j,j+2)
         local ax,ay=point(a)
         local bx,by=point(b)
         local cx,cy=point(c)
         lcd.drawFilledTriangle(ax,ay,bx,by,cx,cy,ink)
       end
-    elseif value:sub(i,i)=="." then
+    elseif string.sub(value,i,i)=="." then
       local dot=max(2,floor(scale*12))
       rect(x,y+h-dot,dot,dot,ink)
       x=x+floor(17*scale+.5)-advance
@@ -454,7 +460,7 @@ local function instrumentNote(w,d,rep,page)
   if w.mahReset then return "mAh COUNTER RESET",noir.rose end
   if w.mahPartial then return "mAh PARTIAL",noir.rose end
   if rep and w.logOn and page~=4 then return w.logStatus,noir.soft end
-  return w.aircraft:upper(),noir.soft
+  return string.upper(w.aircraft),noir.soft
 end
 
 local function nocturne(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
@@ -607,7 +613,7 @@ local function nocturne(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
       for i=1,rows do
         local r=w.recent[i]
         line(margin,y-2,W-margin-1,y-2,noir.rule)
-        caption(margin,y,half,r.date:sub(1,16)..(r.partial and "*" or ""),noir.ivory)
+        caption(margin,y,half,string.sub(r.date,1,16)..(r.partial and "*" or ""),noir.ivory)
         caption(margin+half,y,inner-half,time(r.duration).."   /   "..fmt(r.speed and r.speed*(w.mph and .621371 or 1),"%.0f").." "..unit,noir.gilt,RIGHT)
         y=y+step
       end
@@ -725,7 +731,7 @@ local function tailor(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
       for i=1,min(#w.recent,max(0,floor((sy-y)/rowH))) do
         local r=w.recent[i]
         line(m+pad,y-4,W-m-pad-1,y-4,p.rule)
-        caption(m+pad,y,half-pad,r.date:sub(1,16)..(r.partial and "*" or ""),p.black)
+        caption(m+pad,y,half-pad,string.sub(r.date,1,16)..(r.partial and "*" or ""),p.black)
         caption(m+half,y,inner-half-pad,time(r.duration).."  /  "..fmt(r.speed and r.speed*sf,"%.0f").." "..unit,p.black,RIGHT)
         y=y+rowH
       end
@@ -756,7 +762,7 @@ local function tailor(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
     textBox(left,numY,wing-2*pad,numH,heroValue,p.black,0,true)
   else
     local numWidth=(#heroValue*46)
-    if heroValue:find(".",1,true) then numWidth=numWidth-29 end
+    if string.find(heroValue,".",1,true) then numWidth=numWidth-29 end
     local digitH=min(numH,floor((wing-2*pad)*64/numWidth))
     dialFigures(left,numY,max(9,digitH),heroValue,tailorFigures,p.black,p.black)
   end
@@ -1080,7 +1086,7 @@ local function comicDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page,re
   if #w.recent==0 then caption(6,y,W-12,"NO FLIGHTS YET",c.cream) end
   for i=1,min(#w.recent,floor((foot-y-1)/(sh+5))) do
    local r=w.recent[i];rect(3,y,W-6,sh+3,i%2==1 and c.cream or c.mist)
-   caption(7,y+1,floor(W*.52)-8,r.date:sub(1,16)..(r.partial and "*" or ""),c.ink)
+   caption(7,y+1,floor(W*.52)-8,string.sub(r.date,1,16)..(r.partial and "*" or ""),c.ink)
    caption(floor(W*.52),y+1,floor(W*.48)-7,time(r.duration).."   "..fmt(r.speed and r.speed*sf,"%.0f").." "..unit,c.ink,RIGHT)
    y=y+sh+5
   end
@@ -1136,7 +1142,7 @@ local function comicDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page,re
  local x=left+6;local room=plateW-13
  caption(x,top+5,room,label,c.ink)
  local timerY=top+band-sh-9
- local subtitle=record and (record.date:sub(1,16)..(record.partial and " *" or "")) or ("ARM TIME  "..duration)
+ local subtitle=record and (string.sub(record.date,1,16)..(record.partial and " *" or "")) or ("ARM TIME  "..duration)
  local hasSub=band>=3*sh+20
  textBox(x,top+sh+6,room,(hasSub and timerY or top+band-7)-(top+sh+6),value,c.ink,0,true)
  if hasSub then
@@ -1264,7 +1270,7 @@ local function raceDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page,r)
   if not r and page==1 and y+sh<=H then caption(3,y,W-6,speed.."   "..duration,p.paper);y=y+sh+2 end
   for i,v in ipairs(fields) do
    if y+sh>H then break end
-   local label=v[1];if W<120 then label=(r and ({"SPD","ALT","LQ","RF"})[i]) or label:sub(1,3) end
+   local label=v[1];if W<120 then label=(r and ({"SPD","ALT","LQ","RF"})[i]) or string.sub(label,1,3) end
    if W>=140 then
     caption(3,y,floor(W*.46)-4,label,p.dim);caption(floor(W*.46),y,floor(W*.54)-3,v[2],p.paper,RIGHT)
    else caption(3,y,W-6,label.." "..v[2],p.paper) end
@@ -1287,7 +1293,7 @@ local function raceDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page,r)
  if r then
   local bh=sh+10
   rect(left,top,inner,bh,p.ink)
-  caption(left+6,top+4,floor(inner*.62),r.date:sub(1,16)..(r.partial and " *" or ""),p.paper)
+  caption(left+6,top+4,floor(inner*.62),string.sub(r.date,1,16)..(r.partial and " *" or ""),p.paper)
   caption(left+floor(inner*.59),top+4,floor(inner*.41)-6,"ARM  "..duration,p.amber,RIGHT)
   raceFields(left,top+bh+3,inner+2,height-bh-3,2,fields,sh,true)
  elseif page==4 then
@@ -1306,7 +1312,7 @@ local function raceDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page,r)
   for i=1,min(#w.recent,floor((foot-y-3)/(sh+6))) do
    local row=w.recent[i]
    rect(left,y,inner,sh+4,i%2==1 and p.paper or p.metal)
-   caption(left+4,y+1,half-5,row.date:sub(1,16)..(row.partial and "*" or ""),p.deep)
+   caption(left+4,y+1,half-5,string.sub(row.date,1,16)..(row.partial and "*" or ""),p.deep)
    caption(left+half,y+1,inner-half-4,time(row.duration).."  "..fmt(row.speed and row.speed*sf,"%.0f").." "..unit,p.ink,RIGHT)
    y=y+sh+6
   end
@@ -1374,7 +1380,7 @@ local function refresh(w,event,touch)
  if w.theme==6 and apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page) then return end
  rect(0,0,W,H,bg)
  if W<160 or H<100 then if W>=65 and H>=30 then txt(3,3,"SQ DASH",SMLSIZE,w.accent);txt(3,16,"Larger zone",SMLSIZE,muted) end;return end
- txt(6,3,"SQ / FPV DASHBOARD  1.8.8",SMLSIZE,accent)
+ txt(6,3,"SQ / FPV DASHBOARD  1.8.9",SMLSIZE,accent)
  if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
  line(6,17,W-7,17,border)
  if W>=300 and H>=175 and page~=1 then
@@ -1397,7 +1403,7 @@ local function refresh(w,event,touch)
    c(5,"OBSERVED mAh",fmt(m,"%.0f"))
    c(6,rep and "PEAK POWER" or "POWER",fmt(d.watts,"%.0f W"))
   else
-   txt(8,22,"04 / LOGBOOK / "..w.aircraft:sub(1,20),SMLSIZE,accent)
+   txt(8,22,"04 / LOGBOOK / "..string.sub(w.aircraft,1,20),SMLSIZE,accent)
    local factor=w.mph and .621371 or 1
    local h2=H>=230 and 45 or 34
    card(8,39,cw,h2,"FLIGHTS",tostring(w.total),nil,accent)
@@ -1405,7 +1411,7 @@ local function refresh(w,event,touch)
    txt(8,43+h2,"TOTAL "..time(w.totalTime).."  |  BEST "..(w.allTime and time(w.allTime) or "--").."  |  "..fmt(w.allPower,"%.0f W"),SMLSIZE,muted)
    local rows=min(#w.recent,floor((H-82-h2)/17))
    for i=1,rows do local r=w.recent[i];local yy=59+h2+(i-1)*17
-    txt(8,yy,r.date:sub(1,16)..(r.partial and "*" or ""),SMLSIZE,white)
+    txt(8,yy,string.sub(r.date,1,16)..(r.partial and "*" or ""),SMLSIZE,white)
     txt(W-8,yy,time(r.duration).."  "..fmt(r.speed and r.speed*factor,"%.0f").." "..unit,RIGHT+SMLSIZE,accent)
    end
   end

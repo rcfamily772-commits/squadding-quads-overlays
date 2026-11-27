@@ -1,4 +1,6 @@
 -- Instrument drawing limits, asset lifetime and the disarm path.
+-- Match the V15 configuration that has no method lookup on strings.
+debug.setmetatable("", nil)
 SOURCE,BOOL,VALUE=1,2,3
 SMLSIZE,MIDSIZE,DBLSIZE,XXLSIZE=0x02000000,0x04000000,0x08000000,0x10000000
 CENTER,RIGHT,SOLID=0x40000000,0x20000000,0
@@ -16,7 +18,7 @@ function getDateTime() return {year=2026,mon=11,day=27,hour=8,min=0,sec=0} end
 model={getInfo=function() return {name='BoyWonderFPV',filename='boy.yml'} end}
 Bitmap={open=function(path) assert(path=='/WIDGETS/SQDash/pilot.png');loads=loads+1;return 'pilot' end}
 local function point(x,y)
- assert(x%1==0 and y%1==0 and x>=0 and x<LCD_W and y>=0 and y<LCD_H,('point %s,%s in %sx%s'):format(x,y,LCD_W,LCD_H))
+ assert(x%1==0 and y%1==0 and x>=0 and x<LCD_W and y>=0 and y<LCD_H,string.format('point %s,%s in %sx%s',x,y,LCD_W,LCD_H))
  draws=draws+1
 end
 lcd={RGB=function(r,g,b) return r*65536+g*256+b end}

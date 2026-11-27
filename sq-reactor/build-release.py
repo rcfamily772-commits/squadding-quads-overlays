@@ -8,7 +8,9 @@ from urllib.parse import urljoin
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 dash = Path(__file__).resolve().parent
-version = "1.8.8"
+version = "1.8.9"
+# EdgeTX compares the source timestamp with its compiled .luac cache.
+release_time = (2026, 11, 27, 9, 49, 0)
 zip_name = f"Squadding-Quads-FPV-Dashboard-v{version}.zip"
 site = "https://rcfamily772-commits.github.io/squadding-quads-overlays/"
 lua = dash / "WIDGETS/SQDash/main.lua"
@@ -23,7 +25,7 @@ def archive(files):
     dest = io.BytesIO()
     with ZipFile(dest, "w") as out:
         for name, data in files.items():
-            info = ZipInfo(name, (2026, 11, 27, 0, 0, 0))
+            info = ZipInfo(name, release_time)
             info.external_attr = 0o100644 << 16
             out.writestr(info, data, compress_type=ZIP_DEFLATED, compresslevel=9)
     return dest.getvalue()

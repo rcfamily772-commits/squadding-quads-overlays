@@ -5,7 +5,7 @@ return function(_,source,emit,get,measure)
   select=select,type=type,tonumber=tonumber,tostring=tostring,math=math,string=string,table=table,
   LCD_W=480,LCD_H=272,SMLSIZE=0x02000000,MIDSIZE=0x04000000,DBLSIZE=0x08000000,
   XXLSIZE=0x10000000,CENTER=0x40000000,RIGHT=0x20000000,SOLID=0,SOURCE=1,BOOL=2,VALUE=3,
-  getTime=function() return math.floor(get(nil,"clock") or 0) end,model={getInfo=function() return {name="Demo aircraft"} end}}
+  getTime=function() return math.floor(get(nil,"clock") or 0) end,model={getInfo=function() return {name="Demo aircraft",filename="demo.yml"} end}}
  local lcd={};env.lcd=lcd
  lcd.RGB=function(r,g,b) return 0x01000000+r*65536+g*256+b end
  lcd.sizeText=function(s,f) return measure(nil,s,f),f==env.XXLSIZE and 64 or f==env.DBLSIZE and 32 or f==env.MIDSIZE and 22 or 12 end

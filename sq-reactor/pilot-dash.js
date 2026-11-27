@@ -71,7 +71,7 @@ function render(){
 async function init(){
  try{
   [source,adapter]=await Promise.all(['WIDGETS/SQDash/main.lua','preview-runtime.lua'].map(async u=>{const r=await fetch(new URL(u,root),{cache:'no-cache'});if(!r.ok)throw Error('could not load renderer');return r.text();}));
-  worker=new Worker(new URL('preview-worker.js?v=1.8.8',root));
+  worker=new Worker(new URL('preview-worker.js?v=1.8.9',root));
   worker.onerror=e=>fail(e.message||'worker error');
   worker.onmessage=({data})=>{
    clearTimeout(deadline);busy=false;if(data.error){fail(data.error);return;}
