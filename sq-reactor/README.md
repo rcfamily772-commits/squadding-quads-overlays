@@ -1,8 +1,10 @@
-# Squadding Quads FPV Dashboard v1.8.9.1
+# Squadding Quads FPV Dashboard v1.8.9.2
 
-[Dashboard](./) · [Download v1.8.9.1](Squadding-Quads-FPV-Dashboard-v1.8.9.1.zip) · [Grand Prix ’92](grand-prix-92/) · [Boy Wonder](boy-wonder/)
+[Dashboard](./) · [Download v1.8.9.2](Squadding-Quads-FPV-Dashboard-v1.8.9.2.zip) · [Grand Prix ’92](grand-prix-92/) · [Boy Wonder](boy-wonder/)
 
-**New in v1.8.9.1** — all ten themes have a bottom tab bar. On a touchscreen radio, long-press SQDash, choose **Full screen**, then tap **Performance**, **Essentials**, **Battery** or **Logbook**. The selected tab uses the theme’s accent. The three live pages can be switched in flight. Logbook opens when disarmed. Before configuring an arm source you can also explore the pages. EdgeTX sends widget touch events in full-screen mode. On a radio with physical controls, the existing page keys still cycle layouts while disarmed.
+**New in v1.8.9.2** — Live telemetry stays visible between packets while EdgeTX considers the sensor current. A lost sensor clears on the next poll. Flight statistics and arm transitions still require fresh readings.
+
+**Added in v1.8.9.1** — all ten themes have a bottom tab bar. On a touchscreen radio, long-press SQDash, choose **Full screen**, then tap **Performance**, **Essentials**, **Battery** or **Logbook**. The selected tab uses the theme’s accent. The three live pages can be switched in flight. Logbook opens when disarmed. Before configuring an arm source you can also explore the pages. EdgeTX sends widget touch events in full-screen mode. On a radio with physical controls, the existing page keys still cycle layouts while disarmed.
 
 **Grand Prix ’92 is Theme 10** in the shared dashboard. Its royal-blue, yellow and white cockpit takes inspiration from the 1992 Williams FW14B. The instrument cluster pairs amber speed digits with a calibrated 0–200 km/h arc and a red peak marker. The timer and GPS trace sit beside the dial. Essentials, Battery, Logbook and the four-stat disarm summary share the pit-wall layout. Theme 10 uses the radio’s drawing primitives and requires no artwork on the SD card.
 

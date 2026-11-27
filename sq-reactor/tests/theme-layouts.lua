@@ -106,3 +106,44 @@ local function checkTabs(theme)
 end
 for theme=1,10 do checkTabs(theme) end
 print("PASS four direct tabs on all ten themes, touch boundaries, inset zones, setup, flight and report navigation.")
+
+-- Reproduce the V15 recording with sensors on different update schedules.
+local function checkSensorUpdates()
+ LCD_W,LCD_H=480,210
+ local sensors={
+  VFAS={id=2,unit=1}, RQly={id=3,unit=13}, ["1RSS"]={id=4,unit=17},
+  Curr={id=5,unit=2}, GSpd={id=6,unit=7}
+ }
+ local values={-1024,4.60,100,-22,2,30}
+ local current={true,true,true,true,true,true}
+ local fresh={true,false,true,true,true,true}
+ function getFieldInfo(name) return sensors[name] end
+ function getSourceValue(id) return values[id],current[id],fresh[id] end
+ local w=api.create({w=LCD_W,h=LCD_H},{ArmSrc=1,ArmHigh=1,Theme=10,LogSD=0})
+ local function frame()
+  tick=tick+10;draw(w,0)
+ end
+ for i=1,12 do
+  fresh[2]=i%4==0;fresh[3]=i%2==0;fresh[4]=i%3==0
+  frame()
+  assert(labels["4.60 V"] and labels["100%"] and labels["-22 dBm"],
+         "current readings blinked between telemetry packets")
+ end
+ values[1]=1024;fresh[1]=false;frame()
+ assert(w.armUnknown and w.state=="READY","held arm input must not start a flight")
+ fresh[1]=true;frame()
+ assert(w.state=="FLIGHT")
+ local speedSamples=w.speedN
+ fresh[4]=false;values[4]=-99;fresh[6]=false;frame()
+ assert(w.data.rssi==-99 and w.stats.rssi==-22 and w.speedN==speedSamples,
+        "a display-only reading was counted in flight statistics")
+ values[3]=0;frame();assert(labels["0%"],"a valid zero was blanked")
+ current[2]=false;current[3]=false;current[4]=false;frame()
+ assert(labels["--"] and not labels["4.60 V"] and not labels["0%"] and not labels["-99 dBm"])
+ assert(w.data.volt==nil and w.data.watts==nil,"lost voltage or power survived")
+ current[2]=true;values[2]=4.58;frame()
+ assert(labels["4.58 V"] and w.data.watts==4.58*2 and w.data.rssi==nil,
+        "voltage recovery affected another sensor")
+end
+checkSensorUpdates()
+print("PASS V15 telemetry display, independent packet rates, zero, loss, recovery and fresh-only flight tracking.")

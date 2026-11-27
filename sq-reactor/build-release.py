@@ -8,9 +8,9 @@ from urllib.parse import urljoin
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
 dash = Path(__file__).resolve().parent
-version = "1.8.9.1"
+version = "1.8.9.2"
 # EdgeTX compares the source timestamp with its compiled .luac cache.
-release_time = (2026, 11, 27, 10, 5, 0)
+release_time = (2026, 11, 27, 12, 0, 0)
 zip_name = f"Squadding-Quads-FPV-Dashboard-v{version}.zip"
 site = "https://rcfamily772-commits.github.io/squadding-quads-overlays/"
 lua = dash / "WIDGETS/SQDash/main.lua"

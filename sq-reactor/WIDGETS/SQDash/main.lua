@@ -1,4 +1,4 @@
--- Squadding Quads FPV Dashboard v1.8.9.1 | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
+-- Squadding Quads FPV Dashboard v1.8.9.2 | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
 local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,8,1,10},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,1}}
@@ -29,7 +29,7 @@ end
 local function read(id)
  if not id or type(getSourceValue)~="function" then return nil end
  local ok,v,current,fresh=pcall(getSourceValue,id)
- if ok and type(v)=="number" and v==v and current and fresh then return v end
+ if ok and type(v)=="number" and v==v and current then return v,fresh end
  return nil
 end
 -- Bounded history: one speed sample per second, at most 36, no SD writes.
@@ -140,17 +140,30 @@ local function sample(w)
  if w.last and (now<w.last or now-w.last>100) and w.state=="FLIGHT" then w.gap=true end
  w.last=now
  if not w.resolved or now<w.resolved or now-w.resolved>=300 then resolve(w);w.resolved=now end
- local a=w.armSrc>0 and read(w.armSrc) or nil
+ local a,armFresh=read(w.armSrc>0 and w.armSrc or nil)
  -- Arm source should be a dedicated AUX output or logical/physical switch; middle is unknown.
  local armed=nil
- if a and a>512 then armed=w.high elseif a and a< -512 then armed=not w.high end
+ if armFresh then
+  if a>512 then armed=w.high elseif a< -512 then armed=not w.high end
+ end
+ -- EdgeTX keeps a sensor current between packets. Use that value for the
+ -- screen, and only feed recently updated samples into flight statistics.
+ local live=w.data
  local d={}
  for key,s in pairs(specs) do
-  local field=w.ids[key];local v=field and read(field.id) or nil
-  if v then v=v*field.scale;if v>=s[3] and v<=s[4] then d[key]=v end end
+  local field=w.ids[key]
+  local v,fresh=read(field and field.id)
+  live[key]=nil
+  if v then
+   v=v*field.scale
+   if v>=s[3] and v<=s[4] then
+    live[key]=v
+    if fresh then d[key]=v end
+   end
+  end
  end
+ live.watts=live.volt and live.amp and live.volt*live.amp
  if d.volt and d.amp then d.watts=d.volt*d.amp end
- w.data=d
  w.safeInput=armed==false
  if armed==nil then
   if w.state=="FLIGHT" then w.gap=true;history(w,now,nil) end
@@ -172,8 +185,9 @@ local function sample(w)
  w.elapsed=max(0,(now-w.start)/100)
  local s=w.stats
  history(w,now,d.speed)
- if not d.speed then w.speedMissing=true end
- if not d.volt then w.voltMissing=true else w.endVolt=d.volt end
+ if not live.speed then w.speedMissing=true end
+ if not live.volt then w.voltMissing=true end
+ if d.volt then w.endVolt=d.volt end
  if d.speed then w.speedSum=w.speedSum+d.speed;w.speedN=w.speedN+1;s.avg=w.speedSum/w.speedN end
  for _,k in ipairs({"speed","amp","alt","watts"}) do if d[k]~=nil then s[k]=s[k] and max(s[k],d[k]) or d[k] end end
  for _,k in ipairs({"volt","lq","rssi"}) do if d[k]~=nil then s[k]=s[k] and min(s[k],d[k]) or d[k] end end
@@ -1468,7 +1482,7 @@ local function draw(w,W,H,page)
  end
  if w.theme==6 and apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page) then return end
  rect(0,0,W,H,bg)
- txt(6,3,"SQ / FPV DASHBOARD  1.8.9.1",SMLSIZE,accent)
+ txt(6,3,"SQ / FPV DASHBOARD  1.8.9.2",SMLSIZE,accent)
  if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
  line(6,17,W-7,17,border)
  if page~=1 then
@@ -1568,7 +1582,7 @@ end
 local function poll(w)
  local old=w.state;local before=w.last;sample(w)
  if before~=w.last and w.safeInput and w.seenSafe then readLog(w);if w.loaded or not w.logPath then saveLog(w) end end
- if old~="FLIGHT" and w.state=="FLIGHT" then w.prevMah=w.data.mah;w.mahPartial=w.startMah==nil;w.mahReset=false;w.stats.mah=w.startMah and 0 or nil end
+ if old~="FLIGHT" and w.state=="FLIGHT" then w.prevMah=w.startMah;w.mahPartial=w.startMah==nil;w.mahReset=false;w.stats.mah=w.startMah and 0 or nil end
 end
 -- refresh uses poll via background before drawing; sample is throttled.
 local function refresh(w,event,touch)

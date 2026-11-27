@@ -2,7 +2,7 @@
 
 [Open the central tools hub](https://rcfamily772-commits.github.io/squadding-quads-overlays/tools/)
 
-- **[Squadding Quads FPV Dashboard](../sq-reactor/)** — Preview four EdgeTX telemetry layouts and download the v1.8.9.1 radio widget. Theme 10 selects Grand Prix ’92, Theme 9 selects Boy Wonder and Theme 8 selects Tailor.
+- **[Squadding Quads FPV Dashboard](../sq-reactor/)** — Preview four EdgeTX telemetry layouts and download the v1.8.9.2 radio widget. Theme 10 selects Grand Prix ’92, Theme 9 selects Boy Wonder and Theme 8 selects Tailor.
 - **Pack Lottery** — Draw a real-world FPV challenge from six decks. Collect rare cards, earn achievements and build your Pilot Passport.
 - **Wallpaper Shuffle** — Give your radio a fresh look every time it starts. Browse the SQ wallpaper library, shuffle manually or hide the controls for a clean view.
 - **RF Doctor** — See live radio-link telemetry, capture session statistics and compare exported CSV logs from two test flights in the browser.
