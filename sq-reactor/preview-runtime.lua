@@ -18,14 +18,16 @@ return function(_,source,emit,get,measure)
   for _,k in ipairs({"theme","mph","feet","page","aircraft","state","elapsed","flights","newBest","bestSpeed","bestTime","bestAmp","firstVolt","endVolt","total","totalTime","allSpeed","allPower","allTime","logStatus","gap","speedMissing","armUnknown","seenSafe","safeInput"}) do w[k]=value(k) end
   for _,k in ipairs({"theme","page","flights","total"}) do w[k]=math.floor(w[k]) end
   w.accent=lcd.RGB(value("r"),value("g"),value("b"));w.dim=lcd.RGB(29,57,64)
-  w.cells=6;w.armSrc=1;w.logOn=true;w.loaded=true;w.pending=nil
+  w.cells=6;w.armSrc=1;w.logOn=true;w.loaded=true;w.pending={}
   w.data={};w.stats={}
   for _,k in ipairs({"speed","volt","amp","mah","lq","rssi","alt","watts","avg"}) do w.data[k]=value("live."..k);w.stats[k]=value("stats."..k) end
   w.hist={};for i=1,value("history.length") do w.hist[i]=value("history."..(i-1)) or false end
   w.recent={};for i=1,value("recent.length") do
-   local r={};for _,k in ipairs({"date","duration","speed","partial"}) do r[k]=value("recent."..(i-1).."."..k) end
+   local r={};for _,k in ipairs({"date","duration","speed","alt","lq","rssi","partial"}) do r[k]=value("recent."..(i-1).."."..k) end
    w.recent[i]=r
   end
+  w.showSummary=value("showSummary");w.report=w.showSummary and w.recent[1] or nil
+  local entry=value("entry");w.entry=entry and entry>0 and math.floor(entry) or nil
   api.refresh(w,nil)
  end
 end

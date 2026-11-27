@@ -1,8 +1,8 @@
-# SQ Pilot Dash v1.8.2 · APEX Tailor
+# SQ Pilot Dash v1.8.5 · APEX Tailor
 
-[Launch the live preview](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/) · [Download v1.8.2](SQ-Pilot-Dash-v1.8.2-Tailor.zip) · [Design board](design/tailor/overview.png) · [Previous Nocturne v1.8.1](v1.8.1/)
+[Launch the live preview](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/) · [Download v1.8.5](SQ-Pilot-Dash-v1.8.5-Tailor.zip) · [Flight summary](design/tailor/flight-summary.png) · [Previous Tailor v1.8.2](SQ-Pilot-Dash-v1.8.2-Tailor.zip)
 
-Tailor is Theme 8 for Squadding Quads Pilot Dash. Its camel instrument panel has a diagonal edge, with custom black condensed figures and a separate arm timer. The main panel turns chalk on disarm and displays the frozen flight values. The Logbook uses dark text on a chalk background.
+Tailor is Theme 8 for Squadding Quads Pilot Dash. Its camel instrument panel has a diagonal edge, with custom black condensed figures and a separate arm timer. Disarming opens a dedicated summary over any layout. It shows top GPS ground speed, highest reported altitude, lowest uplink LQ (%) and weakest receiver RSSI (dBm) sampled during that flight. The Logbook uses dark text on a chalk background.
 
 ## Install or upgrade
 
@@ -18,13 +18,17 @@ The main design target is a 480 × 272 landscape zone on colour EdgeTX 2.11 or l
 - **Performance** places GPS ground speed, a recent speed trace where space permits, and arm time alongside voltage, current, power, link quality, RSSI and altitude. A lower rail shows peaks and observed consumption.
 - **Essentials** uses six larger fields for speed, altitude, voltage, link quality, arm time and power.
 - **Battery** shows live or minimum pack voltage, observed voltage drop from the first armed sample, consumption, current and power.
-- **Logbook** shows per-model saved flights, total time, best ground speed, peak power and recent entries. The logbook is available with the arm source disarmed.
+- **Logbook** shows per-model flights, total time, best ground speed, peak power and recent entries. The logbook is available with the arm source disarmed.
 
 The radio follows your configured arm source. Disarming freezes the report until the next observed arm cycle. Missing readings appear as dashes. Compatible telemetry sensors are required for each reading. Select MPH and Feet independently. Set Cells only when the pack count is known.
 
 ## Records
 
-The optional **LogSD** setting uses the existing `/LOGS/SQD_<model filename>.csv` journal. Keep one widget instance per model and allow history to load while disarmed. The existing SQ14 record format and model filenames apply, including to logs saved by v1.8. The logbook retains eight recent rows in memory. Archive a journal manually when it reaches the existing 256 KiB limit.
+In full-screen widget view, press Enter or tap the disarm summary to open Logbook. Press Enter or tap again to review the newest flight. Next and Previous step through up to eight entries. Enter or tap returns to the overview. On the summary, a page key returns to the usual layout navigation. Re-arming always returns to live readings.
+
+**LogSD** defaults to on for a new widget. When upgrading an existing widget, turn it on in widget settings to keep flights after a restart. With LogSD off, flights remain available for the session. The summary shows the result of the SD save. Pending SD writes wait through a quick re-arm and resume while disarmed (up to eight queued flights).
+
+The widget uses the existing `/LOGS/SQD_<model filename>.csv` journal. Keep one widget instance per model and allow history to load while disarmed. The existing SQ14 record format and model filenames apply, including to logs saved by v1.8. The logbook retains eight recent rows in memory. Archive a journal manually when it reaches the existing 256 KiB limit.
 
 ## Offline preview
 
@@ -32,6 +36,6 @@ Open **APEX-Tailor-Preview.html** from the extracted ZIP in a modern browser. Ch
 
 ## Verification
 
-The regression harness exercised the APEX, Nocturne and Tailor renderers in this build. The new theme passed desktop Lua checks for arm gating, missing GPS, zero link quality, unit conversion and a frozen report. The preview worker's packaged code also ran with a mock display across all eight themes. Physical radio rendering, CPU and memory use, and SD I/O remain to be checked on hardware.
+The desktop Lua harness covers disarm from all four layouts, telemetry extrema and units, missing readings, consecutive flights, SD journal round trips and browsing existing records. The browser preview uses simulated telemetry. Physical-radio fit and SD behaviour still need a hardware check.
 
 Run the desktop Lua harness from the repository root with `SQ_DASH_THEME=8 python3 sq-reactor/tests/run-lua.py`. Set the theme to 7 or 6 to check Nocturne or APEX.

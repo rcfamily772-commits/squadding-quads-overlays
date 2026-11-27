@@ -2,6 +2,7 @@
 const $=id=>document.getElementById(id);
 let mode="ready",start=0,elapsed=0,last=0,stats={},used=0,live={speed:0,volt:25.2,amp:0,lq:100,rssi:-52,alt:0,mah:null};
 let history=[],histAt=-Infinity,speedSum=0,speedN=0,best=null,packs=0,newBest=false;
+let showSummary=false,entry=0;
 let page=1,firstVolt=null,endVolt=null,flightAircraft="",storeOK=true,logs={},gpsMissing=false;
 const storageKey="sq-pilot-dash-demo-v14";
 try{const raw=localStorage.getItem(storageKey);if(raw){const parsed=JSON.parse(raw);if(parsed&&typeof parsed==="object"&&!Array.isArray(parsed))logs=parsed;}}catch(e){storeOK=false;}
@@ -39,22 +40,26 @@ function render(){
  const [width,height]=$('size').value.split('x').map(Number);
  const theme=+$('palette').value,colors=['43daff','63ea9a','ff6f4b','e5be6b','bb89ff','62dae7','d8b782','cfa471'],hex=colors[theme-1];
  if(page===4&&mode==='flight')page=1;
- const snap={width,height,theme,mph:$('units').value==='mph',feet:$('altUnits').value==='ft',page,aircraft:name(),state:report?'REPORT':mode==='flight'?'FLIGHT':'READY',elapsed,flights:packs,newBest,bestSpeed:best,bestTime:null,bestAmp:null,firstVolt,endVolt,
+ const snap={width,height,theme,showSummary,entry,mph:$('units').value==='mph',feet:$('altUnits').value==='ft',page,aircraft:name(),state:report?'REPORT':mode==='flight'?'FLIGHT':'READY',elapsed,flights:packs,newBest,bestSpeed:best,bestTime:null,bestAmp:null,firstVolt,endVolt,
   total:valid.length,totalTime:valid.reduce((t,r)=>t+r.duration,0),allSpeed:maxOf('speed'),allPower:maxOf('watts'),allTime:maxOf('duration'),logStatus:storeOK?'LOCAL DEMO HISTORY':'MEMORY ONLY / STORAGE UNAVAILABLE',gap:false,speedMissing:gpsMissing,armUnknown:false,seenSafe:true,safeInput:mode!=='flight',r:parseInt(hex.slice(0,2),16),g:parseInt(hex.slice(2,4),16),b:parseInt(hex.slice(4,6),16),
   live,stats,history,recent:valid.slice(0,8).map(r=>({...r,date:String(r.date).replace('T',' ')}))};
  $('arm').disabled=mode==='flight'||!worker||engineFailed;$('disarm').disabled=mode!=='flight';$('aircraft').disabled=mode==='flight';
- $('modeLabel').textContent=report?'Last flight · frozen':mode==='flight'?'Demo flight running':'Standby · simulated inputs';
+ $('modeLabel').textContent=showSummary?'Flight summary':entry?'Logbook · flight details':report?'Last flight · frozen':mode==='flight'?'Demo flight running':'Standby · simulated inputs';
  $('modeLabel').classList.toggle('report',report);$('throttleValue').textContent=$('throttle').value+'%';
- document.querySelectorAll('[data-page]').forEach(b=>{b.setAttribute('aria-pressed',String(+b.dataset.page===page));b.disabled=mode==='flight';});
- $('pageHelp').textContent=mode==='flight'?'Finish the demo flight to change layout.':'Choose a layout, start a demo flight, then finish it to freeze the results.';
+ const reviewCount=Math.min(8,valid.length);
+ $('review').hidden=mode==='flight'||(!showSummary&&(page!==4||!reviewCount));
+ $('review').textContent=showSummary?'Open logbook':entry?'Back to logbook':'Review flights';
+ $('older').hidden=$('newer').hidden=!entry||reviewCount<2;
+ document.querySelectorAll('[data-page]').forEach(b=>{b.setAttribute('aria-pressed',String(!showSummary&&+b.dataset.page===page));b.disabled=mode==='flight';});
+ $('pageHelp').textContent=mode==='flight'?'Finish the demo flight to change layout.':showSummary?'The four readings are frozen. Open Logbook to review this flight.':entry?'Browse the most recent eight flights for this aircraft.':'Choose a layout, start a demo flight, then finish it to see the summary.';
  $('screenSize').textContent=width+' × '+height+' px';
- canvas.setAttribute('aria-label',`SQ Pilot Dash ${['','Performance','Essentials','Battery','Logbook'][page]} with simulated telemetry. ${mode==='flight'?'Demo flight running.':report?'Frozen last flight report.':'Standby.'}`);
+ canvas.setAttribute('aria-label',`SQ Pilot Dash ${['','Performance','Essentials','Battery','Logbook'][page]} with simulated telemetry. ${mode==='flight'?'Demo flight running.':showSummary?'Flight summary with top speed, highest altitude, lowest link quality and lowest RSSI.':entry?'Saved flight details.':report?'Frozen last flight report.':'Standby.'}`);
  send(snap);
 }
 async function init(){
  try{
   [source,adapter]=await Promise.all(['WIDGETS/SQDash/main.lua','preview-runtime.lua'].map(async u=>{const r=await fetch(u,{cache:'no-cache'});if(!r.ok)throw Error('could not load renderer');return r.text();}));
-  worker=new Worker('preview-worker.js?v=1.8.2');
+  worker=new Worker('preview-worker.js?v=1.8.5');
   worker.onerror=e=>fail(e.message||'worker error');
   worker.onmessage=({data})=>{
    clearTimeout(deadline);busy=false;if(data.error){fail(data.error);return;}
@@ -75,12 +80,20 @@ let speed=Math.max(0,t*165+Math.sin(elapsed*1.1)*t*11),amp=t*96+Math.max(0,Math.
 live={speed:$("missing").checked?null:speed,volt:Math.max(19,25.2-t*1.9-used*.004),amp,lq:Math.max(0,100-Math.round(t*5+Math.max(0,Math.sin(elapsed*.5))*3)),rssi:-52-t*24-Math.sin(elapsed*.7)*3,alt:t*45+Math.sin(elapsed*.65)*t*9,mah:used};
 live.watts=live.volt*live.amp;if(firstVolt==null)firstVolt=live.volt;endVolt=live.volt;if(live.speed==null)gpsMissing=true;if(live.speed!=null){speedSum+=live.speed;speedN++;}if(now-histAt>=1000){histAt=now;history.push(live.speed);if(history.length>36)history.shift();}
 for(const k in extrema)if(live[k]!=null)stats[k]=stats[k]==null?live[k]:extrema[k](stats[k],live[k]);}
-$("arm").onclick=()=>{mode="flight";flightAircraft=name();firstVolt=endVolt=null;gpsMissing=false;stats={};history=[];histAt=-Infinity;speedSum=speedN=0;newBest=false;used=0;elapsed=0;start=last=performance.now();sample(start);render();};
-$("disarm").onclick=()=>{sample(performance.now());mode="report";packs++;newBest=stats.speed!=null&&(best==null||stats.speed>best);if(newBest)best=stats.speed;saveDemo();render();};
-$("reset").onclick=()=>{mode="ready";firstVolt=endVolt=null;stats={};history=[];histAt=-Infinity;gpsMissing=false;speedSum=speedN=0;best=null;packs=0;newBest=false;used=elapsed=0;live={speed:$("missing").checked?null:0,volt:25.2,amp:0,lq:100,rssi:-52,alt:0,mah:null};render();};
-for(const id of ["palette","units","altUnits","missing","aircraft"])$(id).onchange=()=>{if(mode==="ready")live.speed=$("missing").checked?null:0;render();};
+$("arm").onclick=()=>{showSummary=false;entry=0;mode="flight";flightAircraft=name();firstVolt=endVolt=null;gpsMissing=false;stats={};history=[];histAt=-Infinity;speedSum=speedN=0;newBest=false;used=0;elapsed=0;start=last=performance.now();sample(start);render();};
+$("disarm").onclick=()=>{sample(performance.now());mode="report";showSummary=true;entry=0;packs++;newBest=stats.speed!=null&&(best==null||stats.speed>best);if(newBest)best=stats.speed;saveDemo();render();};
+$("reset").onclick=()=>{showSummary=false;entry=0;mode="ready";firstVolt=endVolt=null;stats={};history=[];histAt=-Infinity;gpsMissing=false;speedSum=speedN=0;best=null;packs=0;newBest=false;used=elapsed=0;live={speed:$("missing").checked?null:0,volt:25.2,amp:0,lq:100,rssi:-52,alt:0,mah:null};render();};
+for(const id of ["palette","units","altUnits","missing"])$(id).onchange=()=>{if(mode==="ready")live.speed=$("missing").checked?null:0;render();};
 
-for(const b of document.querySelectorAll('[data-page]'))b.onclick=()=>{if(mode==='flight')return;page=+b.dataset.page;render();};
+for(const b of document.querySelectorAll('[data-page]'))b.onclick=()=>{if(mode==='flight')return;showSummary=false;entry=0;page=+b.dataset.page;render();};
+$('aircraft').onchange=()=>$('reset').onclick();
+$('review').onclick=()=>{if(showSummary){showSummary=false;page=4;}else{entry=entry?0:1;}render();};
+function stepEntry(direction){
+ const count=Math.min(8,rowsFor(name()).filter(r=>r&&Number.isFinite(r.duration)).length);
+ if(count){entry=(entry-1+direction+count)%count+1;render();}
+}
+$('older').onclick=()=>stepEntry(1);
+$('newer').onclick=()=>stepEntry(-1);
 $('size').onchange=render;$('throttle').oninput=()=>{$('throttleValue').textContent=$('throttle').value+'%';};
 $('exportLog').onclick=()=>{const fields=['date','duration','speed','avg','alt','volt','amp','watts','mah','lq','rssi','endV','partial'];const csv=fields.join(',')+'\n'+rowsFor(name()).map(r=>fields.map(k=>r[k]??'').join(',')).join('\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const a=document.createElement('a');a.href=url;a.download='SQ_Pilot_Dash_demo.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);};
 setInterval(()=>{if(mode==='flight'){sample(performance.now());render();}},200);

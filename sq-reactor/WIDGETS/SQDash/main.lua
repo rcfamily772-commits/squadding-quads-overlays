@@ -1,7 +1,7 @@
--- SQ Pilot Dash v1.8.2 | Apex Tailor | telemetry read-only, opt-in SD log, colour EdgeTX 2.11+
+-- SQ Pilot Dash v1.8.5 | Apex Tailor | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
-local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,8,1,8},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,0}}
+local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,8,1,8},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,1}}
 local palettes={{67,218,255},{99,234,154},{255,111,75},{229,190,107},{187,137,255},{35,221,250},{216,183,130},{207,164,113}}
 local bg=rgb(5,10,17);local panel=rgb(12,22,32);local border=rgb(35,53,66)
 local white=rgb(234,244,250);local muted=rgb(139,163,180);local gold=rgb(235,193,109);local red=rgb(255,107,89)
@@ -13,7 +13,7 @@ local specs={
  amp={{"Curr","Current"},{[2]=1,[3]=.001},-20,500},
  mah={{"Capa","mAh","Consumption"},{[14]=1},0,100000},
  lq={{"RQly","LQ","Link Quality"},{[13]=1,[0]=1},0,100},
- rssi={{"1RSS","2RSS","RSSI dBm"},{[17]=1},-150,0},
+ rssi={{"1RSS","2RSS","RSSI dBm"},{[17]=1,[29]=1},-150,0},
  alt={{"Alt","GAlt","Altitude"},{[9]=1,[10]=.3048},-2000,15000},
 }
 local function resolve(w)
@@ -53,22 +53,27 @@ local function modelId(w)
  w.aircraft=type(t.name)=="string" and t.name or "Aircraft"
  local id=t.filename
  if type(id)=="string" then id=id:match("([^/]+)$") end
- if type(id)=="string" and #id<=64 and id:match("^[%w_.%-]+$") then w.logPath="/LOGS/SQD_"..id..".csv" end
+ if type(id)=="string" and #id<=64 and id:match("^[%w_. %-]+$") then w.logPath="/LOGS/SQD_"..id..".csv" end
 end
-local function accept(w,r)
+local function accept(w,r,fromSD)
  w.total=w.total+1;w.totalTime=w.totalTime+r.duration
  if not r.partial then
   if r.speed and (not w.allSpeed or r.speed>w.allSpeed) then w.allSpeed=r.speed end
   if not w.allTime or r.duration>w.allTime then w.allTime=r.duration end
   if r.watts and (not w.allPower or r.watts>w.allPower) then w.allPower=r.watts end
  end
- table.insert(w.recent,1,r);if #w.recent>8 then table.remove(w.recent) end
+ -- The journal loads oldest first. Keep flights from this session ahead of it.
+ if fromSD and w.sessionRecent==8 then return end
+ if fromSD then r.saveStatus="SD FLIGHT SAVED" end
+ table.insert(w.recent,fromSD and w.sessionRecent+1 or 1,r)
+ if not fromSD then w.sessionRecent=min(8,w.sessionRecent+1) end
+ if #w.recent>8 then table.remove(w.recent) end
 end
 local function decode(w,line)
  local a={};for v in (line..","):gmatch("(.-),") do a[#a+1]=v end
  if #a~=15 or a[1]~="SQ14" or a[15]~="END" then return end
  local d=tonumber(a[3]);if not d or d<0 or d>86400 then return end
- accept(w,{date=a[2],duration=d,speed=tonumber(a[4]),avg=tonumber(a[5]),alt=tonumber(a[6]),volt=tonumber(a[7]),amp=tonumber(a[8]),watts=tonumber(a[9]),mah=tonumber(a[10]),lq=tonumber(a[11]),rssi=tonumber(a[12]),endV=tonumber(a[13]),partial=a[14]~="0"})
+ accept(w,{date=a[2],duration=d,speed=tonumber(a[4]),avg=tonumber(a[5]),alt=tonumber(a[6]),volt=tonumber(a[7]),amp=tonumber(a[8]),watts=tonumber(a[9]),mah=tonumber(a[10]),lq=tonumber(a[11]),rssi=tonumber(a[12]),endV=tonumber(a[13]),partial=a[14]~="0"},true)
 end
 local function readLog(w)
  if not w.logOn then return end
@@ -91,16 +96,16 @@ local function readLog(w)
  w.buffer=all:sub(pos);if #w.buffer>512 then w.buffer="" end
 end
 local function saveLog(w)
- if not w.pending then return end
- local r=w.pending;w.pending=nil
- if not w.logOn then w.logStatus="SD LOG OFF";return end
- if not w.logPath or not w.loaded or w.logBlocked then w.logStatus="NOT SAVED / SD NOT READY";return end
+ if #w.pending==0 then return end
+ local r=table.remove(w.pending,1)
+ if not w.logPath or w.logBlocked then r.saveStatus=w.logStatus;return end
  local row=table.concat({"SQ14",r.date,num(r.duration),num(r.speed),num(r.avg),num(r.alt),num(r.volt),num(r.amp),num(r.watts),num(r.mah),num(r.lq),num(r.rssi),num(r.endV),r.partial and "1" or "0","END"},",")
- if w.bytes+#row+2>262144 then w.logBlocked=true;w.logStatus="ARCHIVE CSV / SIZE LIMIT";return end
+ if w.bytes+#row+2>262144 then w.logBlocked=true;w.logStatus="ARCHIVE CSV / SIZE LIMIT";r.saveStatus=w.logStatus;return end
  local ok,f=pcall(io.open,w.logPath,"a")
- if not ok or not f then w.logStatus="NOT SAVED / OPEN FAILED";return end
+ if not ok or not f then w.logStatus="NOT SAVED / OPEN FAILED";r.saveStatus=w.logStatus;return end
  local good,result=pcall(io.write,f,"\n",row,"\n");local closed=pcall(io.close,f)
- if good and result and closed then w.bytes=w.bytes+#row+2;accept(w,r);w.logStatus="SD FLIGHT SAVED" else w.logStatus="NOT SAVED / WRITE FAILED" end
+ if good and result and closed then w.bytes=w.bytes+#row+2;w.logStatus="SD FLIGHT SAVED" else w.logStatus="NOT SAVED / WRITE FAILED" end
+ r.saveStatus=w.logStatus
 end
 local function finish(w)
  w.flights=w.flights+1
@@ -109,7 +114,19 @@ local function finish(w)
  if not w.bestTime or w.elapsed>w.bestTime then w.bestTime=w.elapsed end
  if s.amp and (not w.bestAmp or s.amp>w.bestAmp) then w.bestAmp=s.amp end
  local r={date=date(),duration=w.elapsed,speed=s.speed,avg=s.avg,alt=s.alt,volt=s.volt,amp=s.amp,watts=s.watts,mah=s.mah,lq=s.lq,rssi=s.rssi,endV=w.endVolt,partial=w.gap or w.mahReset or (w.mahPartial and s.mah~=nil) or (w.speedMissing and s.speed~=nil) or (w.voltMissing and s.volt~=nil)}
- if w.logOn then w.pending=r end
+ w.report=r
+ w.showSummary=true
+ w.entry=nil
+ accept(w,r,false)
+ if not w.logOn then
+  r.saveStatus="SESSION ONLY / SD LOG OFF"
+ elseif #w.pending<8 then
+  r.saveStatus="WAITING TO SAVE"
+  table.insert(w.pending,r)
+ else
+  r.saveStatus="NOT SAVED / QUEUE FULL"
+  w.logStatus=r.saveStatus
+ end
 end
 local function sample(w)
  local now=getTime()
@@ -140,7 +157,7 @@ local function sample(w)
   return
  end
  if armed and w.state~="FLIGHT" then
-  if w.pending then w.pending=nil;w.logStatus="NOT SAVED / RE-ARMED" end
+  w.showSummary=false;w.entry=nil;w.report=nil
   w.state="FLIGHT";w.start=now;w.stats={};w.elapsed=0;w.gap=false;w.startMah=d.mah;w.mahReset=false;w.prevMah=nil;w.mahPartial=d.mah==nil;w.hist={};w.histAt=nil;w.speedSum=0;w.speedN=0;w.newBest=false;w.firstVolt=d.volt;w.endVolt=d.volt;w.speedMissing=false;w.voltMissing=false
  elseif not armed and w.state=="FLIGHT" then
   w.elapsed=max(0,(now-w.start)/100);w.state="REPORT";finish(w);return
@@ -164,10 +181,10 @@ end
 local function update(w,o)
  if w.reader then close(w.reader);w.reader=nil end
  o=o or {};w.armSrc=clamp(o.ArmSrc,0,65535,0);w.high=o.ArmHigh==nil or o.ArmHigh==1 or o.ArmHigh==true
- w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,8,8);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==1 or o.LogSD==true
+ w.cells=clamp(o.Cells,0,12,0);w.theme=clamp(o.Theme,1,8,8);w.mph=o.MPH==1 or o.MPH==true;w.feet=o.Feet==1 or o.Feet==true;w.layout=clamp(o.Layout,1,4,1);w.page=w.layout;w.logOn=o.LogSD==nil or o.LogSD==1 or o.LogSD==true
  local p=palettes[w.theme];w.accent=rgb(p[1],p[2],p[3]);w.dim=rgb(floor(p[1]*.22),floor(p[2]*.22),floor(p[3]*.22))
  w.state="SETUP";w.seenSafe=false;w.armUnknown=true;w.stats={};w.data={};w.elapsed=0;w.last=nil;w.resolved=nil;w.prevMah=nil;w.mahPartial=false;w.hist={};w.histAt=nil;w.flights=0;w.bestSpeed=nil;w.bestTime=nil;w.bestAmp=nil;w.newBest=false
- w.recent={};w.total=0;w.totalTime=0;w.allSpeed=nil;w.allTime=nil;w.allPower=nil;w.bytes=0;w.buffer="";w.loaded=false;w.readStarted=false;w.logBlocked=false;w.pending=nil;w.logPath=nil;w.safeInput=false;w.logStatus=w.logOn and "WAIT DISARM / LOAD SD" or "SD LOG OFF";w.aircraft="Aircraft";modelId(w);if w.logOn and not w.logPath then w.logStatus="SD MODEL ID UNAVAILABLE" end
+ w.recent={};w.total=0;w.totalTime=0;w.allSpeed=nil;w.allTime=nil;w.allPower=nil;w.bytes=0;w.buffer="";w.loaded=false;w.readStarted=false;w.logBlocked=false;w.pending={};w.sessionRecent=0;w.report=nil;w.showSummary=false;w.entry=nil;w.logPath=nil;w.safeInput=false;w.logStatus=w.logOn and "WAIT DISARM / LOAD SD" or "SD LOG OFF";w.aircraft="Aircraft";modelId(w);if w.logOn and not w.logPath then w.logStatus="SD MODEL ID UNAVAILABLE" end
 end
 local function create(zone,o) local w={zone=zone};update(w,o);return w end
 local function fmt(v,f) return v~=nil and string.format(f,v) or "--" end
@@ -307,13 +324,13 @@ local function apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
  else
   caption(m,header+5,W-2*m,"AIRCRAFT LOGBOOK",a)
   local y=header+smallH+12;local tw=floor((W-2*m-gap)/2);local th=rich and 51 or 40
-  tile(m,y,tw,th,"SAVED FLIGHTS",tostring(w.total),"")
+  tile(m,y,tw,th,"FLIGHTS",tostring(w.total),"")
   tile(m+tw+gap,y,tw,th,"BEST GROUND SPEED",fmt(w.allSpeed and w.allSpeed*sf,"%.0f"),unit)
   local yy=y+th+8
   caption(m,yy,W-2*m,"TOTAL "..time(w.totalTime).."  /  PEAK "..fmt(w.allPower,"%.0f W"),apexMuted)
   yy=yy+smallH+6
   if #w.recent==0 then
-   caption(m,yy,W-2*m,w.logOn and "NO SAVED FLIGHTS" or "ENABLE LogSD TO SAVE FLIGHTS",apexWhite)
+   caption(m,yy,W-2*m,w.logOn and "NO SAVED FLIGHTS" or "NO FLIGHTS THIS SESSION",apexWhite)
   else
    local rows=min(#w.recent,floor((H-footer-smallH-8-yy)/(smallH+7)))
    for i=1,rows do
@@ -569,14 +586,14 @@ local function nocturne(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
     local half=floor(inner/2)
     local metricH=tall and 55 or 40
     rect(margin,y,inner,metricH,noir.field)
-    field(margin+7,y+3,half-12,metricH-5,"SAVED FLIGHTS",tostring(w.total),"",true)
+    field(margin+7,y+3,half-12,metricH-5,"FLIGHTS",tostring(w.total),"",true)
     field(margin+half+7,y+3,half-12,metricH-5,"BEST GROUND SPEED",fmt(w.allSpeed and w.allSpeed*(w.mph and .621371 or 1),"%.0f"),unit,true)
     y=y+metricH+5
     caption(margin,y,inner,"TOTAL "..time(w.totalTime).."   /   PEAK "..fmt(w.allPower,"%.0f W"),noir.soft)
     y=y+labelH+6
     local statusY=bottom-labelH-5
     if #w.recent==0 and y+labelH<=statusY then
-      caption(margin,y,inner,w.logOn and "NO SAVED FLIGHTS" or "ENABLE LogSD TO SAVE FLIGHTS",noir.ivory)
+      caption(margin,y,inner,w.logOn and "NO SAVED FLIGHTS" or "NO FLIGHTS THIS SESSION",noir.ivory)
     else
       local step=labelH+7
       local rows=min(#w.recent,max(0,floor((statusY-y)/step)))
@@ -679,7 +696,7 @@ local function tailor(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
     rect(m,top,half,summaryH,paper)
     caption(m+pad,top+4,half-2*pad,"AIRCRAFT LOGBOOK",p.black)
     local flightText=tostring(w.total)
-    local label="SAVED FLIGHTS"
+    local label="FLIGHTS"
     local labelW=measure(label,SMLSIZE)
     local room=half-labelW-3*pad
     if room>=28 then
@@ -696,7 +713,7 @@ local function tailor(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
     local sy=bottom-sh-4
     local rowH=sh+8
     if #w.recent==0 and y+sh<=sy then
-      caption(m+pad,y,inner-2*pad,w.logOn and "NO SAVED FLIGHTS" or "ENABLE LogSD TO SAVE FLIGHTS",p.black)
+      caption(m+pad,y,inner-2*pad,w.logOn and "NO SAVED FLIGHTS" or "NO FLIGHTS THIS SESSION",p.black)
     else
       for i=1,min(#w.recent,max(0,floor((sy-y)/rowH))) do
         local r=w.recent[i]
@@ -794,9 +811,74 @@ local function tailor(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page)
   end
 end
 
+-- Show the same immutable flight record on disarm and when opened from Logbook.
+local function flightReport(w,W,H,r,entry)
+ local p=tailoring
+ local ink=w.theme==8 and p.black or white
+ local paper=w.theme==8 and p.chalk or panel
+ local dark=w.theme==8 and p.black or bg
+ local accent=w.accent
+ local pad=W>=360 and 10 or 4
+ local sh=select(2,measure("A",SMLSIZE))
+ rect(0,0,W,H,dark)
+ local speed=r.speed and r.speed*(w.mph and .621371 or 1)
+ local alt=r.alt and r.alt*(w.feet and 3.28084 or 1)
+ local units={w.mph and "mph" or "km/h",w.feet and "ft" or "m","%","dBm"}
+ local values={fmt(speed,"%.0f"),fmt(alt,"%.0f"),fmt(r.lq,"%.0f"),fmt(r.rssi,"%.0f")}
+ local labels=W>=260 and {"TOP SPEED","HIGHEST ALTITUDE","LOWEST LQ","LOWEST RSSI"} or {"TOP SPEED","MAX ALT","MIN LQ","MIN RSSI"}
+ local heading=entry and ("LOGBOOK  "..entry.."/"..#w.recent) or "FLIGHT SUMMARY"
+ if W<160 or H<6*sh+16 then
+  if W<60 or H<sh+2 then return end
+  caption(2,1,W-4,heading,accent)
+  local short={"SPD","ALT","LQ","RF"}
+  for i=1,4 do
+   if (i+1)*sh+2<=H then caption(2,1+i*sh,W-4,short[i].." "..values[i].." "..units[i],white) end
+  end
+  return
+ end
+ local inner=W-2*pad
+ local top=sh+8
+ local duration=time(r.duration)
+ local dw=measure(duration,SMLSIZE)
+ caption(pad,3,inner-dw-6,heading,accent)
+ caption(pad,3,inner,duration,white,RIGHT)
+ if H>=180 then
+  local meta=w.aircraft.."   /   "..r.date
+  if r.partial then meta=meta.."  *" end
+  caption(pad,top,inner,meta,white)
+  top=top+sh+8
+ end
+ local foot=H-sh-3
+ local gap=W>=360 and 5 or 2
+ local cw=floor((inner-gap)/2)
+ local ch=floor((foot-4-top-gap)/2)
+ local inset=cw>=140 and 8 or 4
+ local valueH=min(ch-sh-4,select(2,measure("0",W>=640 and XXLSIZE or DBLSIZE)))
+ for i=1,4 do
+  local x=pad+((i-1)%2)*(cw+gap)
+  local y=top+floor((i-1)/2)*(ch+gap)
+  rect(x,y,cw,ch,paper)
+  caption(x+inset,y+3,cw-2*inset,labels[i],ink)
+  local value=values[i]..(i==3 and "" or " ")..units[i]
+  local valueY=y+sh+3+floor((ch-sh-4-valueH)/2)
+  textBox(x+inset,valueY,cw-2*inset,valueH,value,ink,0,true)
+ end
+ local note=r.saveStatus or w.logStatus
+ local hint=entry and "NEXT / PREV" or "ENTER / LOGBOOK"
+ local hw=measure(hint,SMLSIZE)
+ if W>=320 then
+  caption(pad,foot,inner-hw-8,note,white)
+  caption(pad,foot,inner,hint,accent,RIGHT)
+ else
+  caption(pad,foot,inner,note,white)
+ end
+end
+
 local function refresh(w,event,touch)
  local W,H=w.zone.w,w.zone.h;if event~=nil then W,H=LCD_W,LCD_H end
  if W<1 or H<1 then return end
+ local record=w.showSummary and w.report or (w.entry and w.safeInput and w.page==4 and w.recent[w.entry])
+ if record then flightReport(w,W,H,record,w.entry);return end
  local rep=w.state=="REPORT";local d=rep and w.stats or w.data
  local status=w.armSrc==0 and "SET ARM SOURCE" or (w.armUnknown and "ARM UNKNOWN" or (not w.seenSafe and "DISARM TO SYNC" or (rep and "LAST FLIGHT" or (w.state=="FLIGHT" and "ARM INPUT ON" or "STANDBY"))))
  local accent=rep and gold or w.accent
@@ -820,7 +902,7 @@ local function refresh(w,event,touch)
  if w.theme==6 and apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page) then return end
  rect(0,0,W,H,bg)
  if W<160 or H<100 then if W>=65 and H>=30 then txt(3,3,"SQ DASH",SMLSIZE,w.accent);txt(3,16,"Larger zone",SMLSIZE,muted) end;return end
- txt(6,3,"SQ / PILOT DASH  1.8.2",SMLSIZE,accent)
+ txt(6,3,"SQ / PILOT DASH  1.8.5",SMLSIZE,accent)
  if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
  line(6,17,W-7,17,border)
  if W>=300 and H>=175 and page~=1 then
@@ -846,7 +928,7 @@ local function refresh(w,event,touch)
    txt(8,22,"04 / LOGBOOK / "..w.aircraft:sub(1,20),SMLSIZE,accent)
    local factor=w.mph and .621371 or 1
    local h2=H>=230 and 45 or 34
-   card(8,39,cw,h2,"SAVED FLIGHTS",tostring(w.total),nil,accent)
+   card(8,39,cw,h2,"FLIGHTS",tostring(w.total),nil,accent)
    card(x2,39,cw,h2,"AIRCRAFT BEST",fmt(w.allSpeed and w.allSpeed*factor,"%.0f").." "..unit,nil,accent)
    txt(8,43+h2,"TOTAL "..time(w.totalTime).."  |  BEST "..(w.allTime and time(w.allTime) or "--").."  |  "..fmt(w.allPower,"%.0f W"),SMLSIZE,muted)
    local rows=min(#w.recent,floor((H-82-h2)/17))
@@ -933,11 +1015,34 @@ end
 -- refresh uses poll via background before drawing; sample is throttled.
 local draw=refresh
 refresh=function(w,event,touch)
+ local previous=w.report
  poll(w)
- if event and event~=0 and w.safeInput then
-  if event==EVT_VIRTUAL_NEXT_PAGE or event==EVT_VIRTUAL_NEXT then w.page=w.page%4+1
-  elseif event==EVT_VIRTUAL_PREV_PAGE or event==EVT_VIRTUAL_PREV then w.page=(w.page+2)%4+1 end
+ if event and event~=0 and w.safeInput and previous==w.report then
+  local nextPage=event==EVT_VIRTUAL_NEXT_PAGE or event==EVT_VIRTUAL_NEXT
+  local prevPage=event==EVT_VIRTUAL_PREV_PAGE or event==EVT_VIRTUAL_PREV
+  local selectEntry=event==EVT_VIRTUAL_ENTER or event==EVT_TOUCH_TAP
+  if w.showSummary then
+   if selectEntry then w.showSummary=false;w.page=4
+   elseif nextPage or prevPage or event==EVT_VIRTUAL_EXIT then w.showSummary=false
+    if nextPage then w.page=w.page%4+1 elseif prevPage then w.page=(w.page+2)%4+1 end
+   end
+  elseif w.entry then
+   if nextPage then w.entry=w.entry%#w.recent+1
+   elseif prevPage then w.entry=(w.entry-2)%#w.recent+1
+   elseif selectEntry or event==EVT_VIRTUAL_EXIT then w.entry=nil end
+  elseif selectEntry and w.page==4 and #w.recent>0 then w.entry=1
+  elseif nextPage then w.page=w.page%4+1
+  elseif prevPage then w.page=(w.page+2)%4+1 end
  end
  draw(w,event,touch)
+ if w.page==4 and w.safeInput and not w.showSummary and not w.entry and #w.recent>0 then
+  local W,H=w.zone.w,w.zone.h
+  if event~=nil then W,H=LCD_W,LCD_H end
+  local sh=select(2,measure("A",SMLSIZE))
+  if W>=160 and H>=100 then
+   rect(0,H-sh-3,W,sh+3,bg)
+   caption(4,H-sh-2,W-8,"ENTER / REVIEW FLIGHTS",w.accent,RIGHT)
+  end
+ end
 end
 return {name="SQDash",options=options,create=create,update=update,background=poll,refresh=refresh}

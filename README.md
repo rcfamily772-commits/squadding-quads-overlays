@@ -7,7 +7,7 @@
 
 Independent, Squadding Quads-owned copy of the V5 frosted-glass overlay prototype, reproduced with permission of the original author.
 
-[SQ Pilot Dash v1.8.2 — APEX Tailor for colour EdgeTX radios](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
+[SQ Pilot Dash v1.8.5 — APEX Tailor for colour EdgeTX radios](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
 
 ## Status
 

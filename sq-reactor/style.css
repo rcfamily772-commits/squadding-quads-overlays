@@ -119,3 +119,6 @@ footer {color:var(--dust);padding:18px 0 30px;font-size:9px}
 .download-actions {font-size:12px;color:var(--dust)}
 .release-download {display:block;text-align:center;margin-bottom:8px}
 .release-download:hover {color:#131413;background:#cfa471;border-color:#cfa471}
+
+.review-buttons {margin:0 28px}
+@media(max-width:640px){.review-buttons{margin:0 16px}}
