@@ -39,7 +39,7 @@ function paint(cmd){
  if(op==='drawCircle'||op==='drawFilledCircle'){const [x,y,r,c]=v;ctx.fillStyle=ctx.strokeStyle=colour(c);ctx.beginPath();ctx.arc(x,y,r,0,2*Math.PI);if(op==='drawCircle')ctx.stroke();else ctx.fill();return;}
  const [x,y,w,h,c]=v;ctx.fillStyle=ctx.strokeStyle=colour(c);if(op==='drawRectangle')ctx.strokeRect(x+.5,y+.5,w-1,h-1);else ctx.fillRect(x,y,w,h);
 }
-function fail(message){engineFailed=true;busy=false;$('proof').hidden=false;canvas.hidden=true;$('modeLabel').textContent='Performance · design preview';clearTimeout(deadline);worker?.terminate();$('engine').textContent='Preview unavailable — '+message;$('engine').classList.add('error');$('arm').disabled=true;}
+function fail(message){$('pageTabs').hidden=true;engineFailed=true;busy=false;$('proof').hidden=false;canvas.hidden=true;$('modeLabel').textContent='Performance · design preview';clearTimeout(deadline);worker?.terminate();$('engine').textContent='Preview unavailable — '+message;$('engine').classList.add('error');$('arm').disabled=true;}
 function send(snapshot){
  if(!worker||engineFailed)return;
  if(busy){queued=snapshot;return;}
@@ -62,8 +62,8 @@ function render(){
  $('review').hidden=mode==='flight'||(!showSummary&&(page!==4||!reviewCount));
  $('review').textContent=showSummary?'Open logbook':entry?'Back to logbook':'Review flights';
  $('older').hidden=$('newer').hidden=!entry||reviewCount<2;
- document.querySelectorAll('[data-page]').forEach(b=>{b.setAttribute('aria-pressed',String(!showSummary&&+b.dataset.page===page));b.disabled=mode==='flight';});
- $('pageHelp').textContent=mode==='flight'?'Finish the demo flight to change layout.':showSummary?'The four readings are frozen. Open Logbook to review this flight.':entry?'Browse the most recent eight flights for this aircraft.':'Choose a layout, start a demo flight, then finish it to see the summary.';
+ document.querySelectorAll('[data-page]').forEach(b=>{b.setAttribute('aria-pressed',String(!showSummary&&+b.dataset.page===page));b.disabled=mode==='flight'&&b.dataset.page==='4';});
+ $('pageHelp').textContent=mode==='flight'?'Tap Performance, Essentials or Battery during the flight. Logbook opens after disarm.':showSummary?'The four readings are frozen. Open Logbook to review this flight.':entry?'Browse the most recent eight flights for this aircraft.':'Tap the bottom tabs to change pages. Start a demo flight, then disarm to see the summary.';
  $('screenSize').textContent=width+' × '+height+' px';
  canvas.setAttribute('aria-label',`Squadding Quads FPV Dashboard ${['','Performance','Essentials','Battery','Logbook'][page]} with simulated telemetry. ${mode==='flight'?'Demo flight running.':showSummary?'Flight summary with top speed, highest altitude, lowest link quality and lowest RSSI.':entry?'Saved flight details.':report?'Frozen last flight report.':'Standby.'}`);
  send(snap);
@@ -71,13 +71,17 @@ function render(){
 async function init(){
  try{
   [source,adapter]=await Promise.all(['WIDGETS/SQDash/main.lua','preview-runtime.lua'].map(async u=>{const r=await fetch(new URL(u,root),{cache:'no-cache'});if(!r.ok)throw Error('could not load renderer');return r.text();}));
-  worker=new Worker(new URL('preview-worker.js?v=1.8.9',root));
+  worker=new Worker(new URL('preview-worker.js?v=1.8.9.1',root));
   worker.onerror=e=>fail(e.message||'worker error');
   worker.onmessage=({data})=>{
    clearTimeout(deadline);busy=false;if(data.error){fail(data.error);return;}
    try{
-    const bg=data.commands.find(c=>c[0]==='drawFilledRectangle'&&c[1]===0&&c[2]===0);
-    if(bg&&(canvas.width!==bg[3]||canvas.height!==bg[4])){canvas.width=bg[3];canvas.height=bg[4];}
+    const {width,height,tabHeight}=data;
+    if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
+    const surface=canvas.parentElement;
+    surface.style.setProperty('--screen-ratio',String(width/height));
+    surface.style.setProperty('--tab-height',(100*tabHeight/height)+'%');
+    $('pageTabs').hidden=!tabHeight;
     ctx.clearRect(0,0,canvas.width,canvas.height);data.commands.forEach(paint);canvas.hidden=false;$('proof').hidden=true;
     $('engine').textContent='Actual Lua renderer · browser fonts approximate';canvas.dataset.frame=String(data.id);
     $('arm').disabled=mode==='flight';
@@ -97,7 +101,7 @@ $("disarm").onclick=()=>{sample(performance.now());mode="report";landedAt=Math.f
 $("reset").onclick=()=>{showSummary=false;entry=0;mode="ready";firstVolt=endVolt=null;stats={};history=[];histAt=-Infinity;gpsMissing=false;speedSum=speedN=0;best=null;packs=0;newBest=false;used=elapsed=0;live={speed:$("missing").checked?null:0,volt:25.2,amp:0,lq:100,rssi:-52,alt:0,mah:null};render();};
 for(const id of ["palette","units","altUnits","missing"])$(id).onchange=()=>{if(mode==="ready")live.speed=$("missing").checked?null:0;render();};
 
-for(const b of document.querySelectorAll('[data-page]'))b.onclick=()=>{if(mode==='flight')return;showSummary=false;entry=0;page=+b.dataset.page;render();};
+for(const b of document.querySelectorAll('[data-page]'))b.onclick=()=>{if(mode==='flight'&&b.dataset.page==='4')return;showSummary=false;entry=0;page=+b.dataset.page;render();};
 $('aircraft').onchange=()=>$('reset').onclick();
 $('review').onclick=()=>{if(showSummary){showSummary=false;page=4;}else{entry=entry?0:1;}render();};
 function stepEntry(direction){

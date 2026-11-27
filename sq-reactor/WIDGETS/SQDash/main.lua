@@ -1,4 +1,4 @@
--- Squadding Quads FPV Dashboard v1.8.9 | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
+-- Squadding Quads FPV Dashboard v1.8.9.1 | telemetry read-only, per-model SD log, colour EdgeTX 2.11+
 local floor,min,max=math.floor,math.min,math.max
 local rgb=lcd.RGB
 local options={{"ArmSrc",SOURCE,0},{"ArmHigh",BOOL,1},{"Cells",VALUE,0,0,12},{"Theme",VALUE,8,1,10},{"MPH",BOOL,0},{"Feet",BOOL,0},{"Layout",VALUE,1,1,4},{"LogSD",BOOL,1}}
@@ -1317,7 +1317,8 @@ local function raceDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page,r)
    y=y+sh+6
   end
  elseif page==1 and height>=7*sh+60 then
-  local band=min(floor(height*.58),height-2*(2*sh+8)-3)
+  local fieldBand=sh+select(2,measure("0",MIDSIZE))+8
+  local band=min(floor(height*.58),max(5*sh+12,height-2*fieldBand-3))
   local dw=floor(inner*.59);local sx=left+dw+3;local sw=inner-dw-3
   raceDial(left,top,dw,band,d.speed,w.stats.speed,sv,unit,sh)
   local timerH=floor(band*.56)
@@ -1344,8 +1345,94 @@ local function raceDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page,r)
  end
 end
 
-local function refresh(w,event,touch)
- local W,H=w.zone.w,w.zone.h;if event~=nil then W,H=LCD_W,LCD_H end
+local shortTabs={"PERF","ESS","BATT","LOG"}
+local tinyTabs={"P","E","B","L"}
+
+local function tabHeight(W,H,sh)
+ if W<64 or H<56 then return 0 end
+ return min(52,max(sh+5,floor(H*.14)))
+end
+
+local function tabColours(w)
+ local off,on,ink,selected,trim=panel,w.dim,muted,w.accent,w.accent
+ local theme=w.theme
+ if theme==6 then off,on,ink,selected,trim=apexPanel,apexDim,apexMuted,apexWhite,apexBlue
+ elseif theme==7 then off,on,ink,selected,trim=noir.black,noir.field,noir.soft,noir.ivory,noir.gilt
+ elseif theme==8 then off,on,ink,selected,trim=tailoring.field,tailoring.chalk,tailoring.ivory,tailoring.black,tailoring.gilt
+ elseif theme==9 then off,on,ink,selected,trim=comic.deep,comic.yellow,comic.cream,comic.ink,comic.pink
+ elseif theme==10 then off,on,ink,selected,trim=race.blue,race.yellow,race.paper,race.ink,race.paper end
+ return off,on,ink,selected,trim
+end
+
+local function drawTabs(w,W,top,h,sh,active,canLog)
+ if h==0 then return end
+ local off,on,ink,selected,trim=tabColours(w)
+ local theme=w.theme
+ local labels=racePages
+ if measure(labels[1],SMLSIZE)+12>floor(W/4) then labels=shortTabs end
+ if measure(labels[1],SMLSIZE)+6>floor(W/4) then labels=tinyTabs end
+ for i=1,4 do
+  local left=floor((i-1)*W/4);local width=floor(i*W/4)-left
+  local chosen=active==i
+  local fill=chosen and on or off
+  local fg=chosen and selected or ink
+  if i==4 and not canLog then fill=bg;fg=muted end
+  rect(left,top,width,h,off)
+  rect(left+1,top+2,width-2,h-3,fill)
+  if chosen then
+   rect(left+1,top,width-2,3,trim)
+   if theme==9 and width>=50 then
+    rect(left+3,top+4,3,h-8,comic.pink)
+   elseif theme==10 and width>=50 then
+    lcd.drawFilledTriangle(left+1,top+3,left+9,top+3,left+1,top+h-3,race.paper)
+   elseif theme==8 and width>=60 then
+    line(left+4,top+h-5,left+9,top+h-10,trim)
+    line(left+8,top+h-5,left+13,top+h-10,trim)
+   elseif theme==7 then
+    rect(left+floor(width/4),top+h-3,floor(width/2),1,trim)
+   end
+  end
+  if sh+2<=h then txt(left+floor(width/2),top+max(2,floor((h-sh)/2)),labels[i],SMLSIZE+CENTER,fg) end
+ end
+end
+
+local function hitTab(W,H,h,touch)
+ if type(touch)~="table" or type(touch.x)~="number" or type(touch.y)~="number" then return end
+ if touch.x<0 or touch.x>=W or touch.y<H-h or touch.y>=H then return end
+ for i=4,1,-1 do
+  if touch.x>=floor((i-1)*W/4) then return i end
+ end
+end
+
+-- A short zone still shows the readings for the selected instrument page.
+local function compactInstruments(w,W,H,page,status,sv,unit,alt,altUnit,d,rep)
+ local off,on,ink,selected,trim=tabColours(w)
+ rect(0,0,W,H,off)
+ local sh=select(2,measure("A",SMLSIZE))
+ if W<50 or H<sh+3 then return end
+ caption(3,1,W-6,racePages[page],trim)
+ local speed=fmt(sv,"%.0f").." "..unit
+ local pack=fmt(d.volt,"%.2f V")
+ local values
+ if page==4 then
+  values={{"FLIGHTS",tostring(w.total)},{"TOTAL TIME",time(w.totalTime)},{"BEST SPEED",fmt(w.allSpeed and w.allSpeed*(w.mph and .621371 or 1),"%.0f").." "..unit},{"PEAK POWER",fmt(w.allPower,"%.0f W")}}
+ elseif page==3 then
+  values={{rep and "MIN PACK" or "PACK",pack},{"CURRENT",fmt(d.amp,"%.1f A")},{"USED",fmt(w.stats.mah,"%.0f mAh")},{"POWER",fmt(d.watts,"%.0f W")}}
+ elseif page==1 then
+  values={{rep and "TOP SPEED" or "GPS SPEED",speed},{"ARM TIME",time(w.elapsed)},{"POWER",fmt(d.watts,"%.0f W")},{"RSSI",fmt(d.rssi,"%.0f dBm")}}
+ else
+  values={{rep and "TOP SPEED" or "SPEED",speed},{"ALTITUDE",fmt(alt,"%.0f")..altUnit},{"LQ",fmt(d.lq,"%.0f%%")},{"ARM TIME",time(w.elapsed)},{"PACK",pack}}
+ end
+ local pitch=sh+3
+ for i,v in ipairs(values) do
+  local y=2+i*pitch
+  if y+sh>H then break end
+  caption(3,y,W-6,v[1].."  "..v[2],ink)
+ end
+ if 3+(#values+2)*pitch<=H then caption(3,H-sh-2,W-6,page==4 and w.logStatus or status,trim) end
+end
+
+local function draw(w,W,H,page)
  if W<1 or H<1 then return end
  local record=w.showSummary and w.report or (w.entry and w.safeInput and w.page==4 and w.recent[w.entry])
  if record and w.theme<9 then flightReport(w,W,H,record,w.entry);return end
@@ -1359,14 +1446,16 @@ local function refresh(w,event,touch)
  local cell=voltage and fmt(voltage,"%.2f V/c") or "PACK"
  local duration=time(w.elapsed)
  local alt=d.alt and d.alt*(w.feet and 3.28084 or 1) or nil;local altUnit=w.feet and " ft" or " m"
- local page=w.page
- if page==4 and not w.safeInput then page=1 end
  if w.theme==10 then
   raceDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,record and time(record.duration) or duration,page,record)
   return
  end
  if w.theme==9 then
   comicDraw(w,W,H,d,rep,status,sv,unit,alt,altUnit,record and time(record.duration) or duration,page,record)
+  return
+ end
+ if W<300 or H<175 or (w.theme==8 and H<180) then
+  compactInstruments(w,W,H,page,status,sv,unit,alt,altUnit,d,rep)
   return
  end
  if w.theme==8 then
@@ -1379,11 +1468,10 @@ local function refresh(w,event,touch)
  end
  if w.theme==6 and apex(w,W,H,d,rep,status,sv,unit,alt,altUnit,duration,page) then return end
  rect(0,0,W,H,bg)
- if W<160 or H<100 then if W>=65 and H>=30 then txt(3,3,"SQ DASH",SMLSIZE,w.accent);txt(3,16,"Larger zone",SMLSIZE,muted) end;return end
- txt(6,3,"SQ / FPV DASHBOARD  1.8.9",SMLSIZE,accent)
+ txt(6,3,"SQ / FPV DASHBOARD  1.8.9.1",SMLSIZE,accent)
  if W>=300 then txt(W-6,3,status,RIGHT+SMLSIZE,w.armUnknown and red or accent) end
  line(6,17,W-7,17,border)
- if W>=300 and H>=175 and page~=1 then
+ if page~=1 then
   local cw=floor((W-21)/2);local h=floor((H-60)/3);local x=8;local x2=x+cw+5;local y=38
   local function c(i,label,value,sub) card(i%2==0 and x2 or x,y+floor((i-1)/2)*(h+4),cw,h,label,value,sub,accent) end
   if page==2 then
@@ -1417,14 +1505,6 @@ local function refresh(w,event,touch)
   end
   txt(8,H-14,w.logStatus,SMLSIZE,muted)
   if W>=400 then txt(W-8,H-14,"PAGE  "..page.."/4",RIGHT+SMLSIZE,accent) end
-  return
- end
- if W<300 or H<175 then
-  txt(6,21,status,SMLSIZE,w.armUnknown and red or accent)
-  txt(6,37,fmt(sv,"%.0f").." "..unit,MIDSIZE,white)
-  txt(W-6,39,battery,RIGHT+SMLSIZE,white)
-  txt(6,62,"LQ "..fmt(d.lq,"%.0f%%").."  "..duration,SMLSIZE,muted)
-  if H>=100 then txt(6,79,(rep and "PEAK / MIN" or "LIVE").."  "..fmt(d.amp,"%.1f A"),SMLSIZE,accent) end
   return
  end
  local margin=8;local gap=5;local side=floor(W*.25);local hero=W-2*side-2*gap-2*margin
@@ -1491,11 +1571,20 @@ local function poll(w)
  if old~="FLIGHT" and w.state=="FLIGHT" then w.prevMah=w.data.mah;w.mahPartial=w.startMah==nil;w.mahReset=false;w.stats.mah=w.startMah and 0 or nil end
 end
 -- refresh uses poll via background before drawing; sample is throttled.
-local draw=refresh
-refresh=function(w,event,touch)
+local function refresh(w,event,touch)
  local previous=w.report
  poll(w)
- if event and event~=0 and w.safeInput and previous==w.report then
+ local W,H=w.zone.w,w.zone.h
+ if event~=nil then W,H=LCD_W,LCD_H end
+ local sh=select(2,measure("A",SMLSIZE))
+ local h=tabHeight(W,H,sh)
+ local canLog=w.safeInput or w.armSrc==0
+ local tab=event~=nil and event==EVT_TOUCH_TAP and hitTab(W,H,h,touch)
+ if tab then
+  if previous==w.report and (tab~=4 or canLog) then
+   w.page=tab;w.entry=nil;w.showSummary=false
+  end
+ elseif event and event~=0 and canLog and previous==w.report then
   local nextPage=event==EVT_VIRTUAL_NEXT_PAGE or event==EVT_VIRTUAL_NEXT
   local prevPage=event==EVT_VIRTUAL_PREV_PAGE or event==EVT_VIRTUAL_PREV
   local selectEntry=event==EVT_VIRTUAL_ENTER or event==EVT_TOUCH_TAP
@@ -1512,15 +1601,16 @@ refresh=function(w,event,touch)
   elseif nextPage then w.page=w.page%4+1
   elseif prevPage then w.page=(w.page+2)%4+1 end
  end
- draw(w,event,touch)
+ local page=(w.page==4 and not canLog) and 1 or w.page
+ local bodyH=H-h
+ draw(w,W,bodyH,page)
  if w.theme<9 and w.page==4 and w.safeInput and not w.showSummary and not w.entry and #w.recent>0 then
-  local W,H=w.zone.w,w.zone.h
-  if event~=nil then W,H=LCD_W,LCD_H end
-  local sh=select(2,measure("A",SMLSIZE))
-  if W>=160 and H>=100 then
-   rect(0,H-sh-3,W,sh+3,bg)
-   caption(4,H-sh-2,W-8,"ENTER / REVIEW FLIGHTS",w.accent,RIGHT)
+  if W>=160 and bodyH>=100 then
+   rect(0,bodyH-sh-3,W,sh+3,bg)
+   caption(4,bodyH-sh-2,W-8,"ENTER / REVIEW FLIGHTS",w.accent,RIGHT)
   end
  end
+ drawTabs(w,W,bodyH,h,sh,w.showSummary and 0 or page,canLog)
+ return h
 end
 return {name="SQDash",options=options,create=create,update=update,background=poll,refresh=refresh}

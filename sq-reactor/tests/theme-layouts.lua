@@ -4,7 +4,7 @@ debug.setmetatable("", nil)
 SOURCE,BOOL,VALUE=1,2,3
 SMLSIZE,MIDSIZE,DBLSIZE,XXLSIZE=0x02000000,0x04000000,0x08000000,0x10000000
 CENTER,RIGHT,SOLID=0x40000000,0x20000000,0
-EVT_VIRTUAL_ENTER=104
+EVT_VIRTUAL_ENTER,EVT_TOUCH_TAP,EVT_TOUCH_SLIDE=104,105,106
 local tick,arm,loads=0,-1024,0
 local labels,draws,pilot={},0,nil
 local sizes={{480,272},{460,232},{800,480},{360,180},{320,240},{320,480},{200,120},{160,100},{125,70},{80,64},{20,10}}
@@ -31,9 +31,11 @@ function lcd.drawText(x,y,s,f)
  point(left,y);point(left+tw-1,y+th-1);labels[s]=true
 end
 function lcd.drawFilledRectangle(x,y,w,h) point(x,y);point(x+w-1,y+h-1) end
+lcd.drawRectangle=lcd.drawFilledRectangle
 function lcd.drawLine(x,y,X,Y) point(x,y);point(X,Y) end
 function lcd.drawFilledTriangle(x,y,X,Y,xx,yy) point(x,y);point(X,Y);point(xx,yy) end
 function lcd.drawFilledCircle(x,y,r) point(x-r,y-r);point(x+r,y+r) end
+lcd.drawCircle=lcd.drawFilledCircle
 function lcd.drawBitmap(b,x,y,k)
  assert(b=='pilot');point(x,y);point(x+math.ceil(180*k/100)-1,y+math.ceil(120*k/100)-1)
  pilot=table.concat({x,y,k},',')
@@ -69,3 +71,38 @@ for _,theme in ipairs({9,10}) do
  for _,size in ipairs(sizes) do checkLayout(theme,size) end
 end
 print('PASS Boy Wonder and Grand Prix 92: four layouts, eleven sizes, arm/disarm, saved records, unit conversion and missing readings.')
+
+-- EdgeTX supplies full-screen coordinates even if the configured widget zone is inset.
+local function checkTabs(theme)
+ LCD_W,LCD_H=481,272
+ arm=-1024;tick=tick+20
+ local w=api.create({w=320,h=180},{ArmSrc=1,ArmHigh=1,Theme=theme,LogSD=0})
+ api.background(w)
+ local h=api.refresh(w,0);assert(h>=32 and h<=48)
+ local top=LCD_H-h
+ local function tap(x,y)
+  labels={};api.refresh(w,EVT_TOUCH_TAP,{x=x,y=y})
+ end
+ for page=4,1,-1 do
+  local x=math.floor((page-1)*LCD_W/4)
+  tap(x,top);assert(w.page==page and not w.entry and not w.showSummary)
+  for _,label in ipairs({"PERFORMANCE","ESSENTIALS","BATTERY","LOGBOOK"}) do assert(labels[label]) end
+  if page>1 then tap(x-1,LCD_H-1);assert(w.page==page-1) end
+ end
+ tap(300,top-1);assert(w.page==1)
+ api.refresh(w,EVT_TOUCH_SLIDE,{x=300,y=top+2});assert(w.page==1)
+ tap(LCD_W,LCD_H-1);assert(w.page==1)
+ arm=1024;tick=tick+15;api.background(w)
+ tap(300,top);assert(w.page==3 and w.state=="FLIGHT")
+ tap(480,top);assert(w.page==3 and #w.recent==0)
+ arm=-1024;tick=tick+15;tap(0,top)
+ assert(w.showSummary and #w.recent==1,"disarm takes precedence over a simultaneous tap")
+ tap(480,LCD_H-1);assert(w.page==4 and not w.showSummary and not w.entry)
+ tap(200,30);assert(w.entry==1)
+ tap(480,top);assert(w.page==4 and not w.entry)
+ tap(120,top);assert(w.page==2 and #w.recent==1)
+ local setup=api.create({w=125,h=70},{Theme=theme})
+ api.refresh(setup,EVT_TOUCH_TAP,{x=480,y=top});assert(setup.page==4)
+end
+for theme=1,10 do checkTabs(theme) end
+print("PASS four direct tabs on all ten themes, touch boundaries, inset zones, setup, flight and report navigation.")

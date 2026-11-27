@@ -1,12 +1,14 @@
-# Squadding Quads FPV Dashboard v1.8.9
+# Squadding Quads FPV Dashboard v1.8.9.1
 
-[Dashboard](./) · [Download v1.8.9](Squadding-Quads-FPV-Dashboard-v1.8.9.zip) · [Grand Prix ’92](grand-prix-92/) · [Boy Wonder](boy-wonder/)
+[Dashboard](./) · [Download v1.8.9.1](Squadding-Quads-FPV-Dashboard-v1.8.9.1.zip) · [Grand Prix ’92](grand-prix-92/) · [Boy Wonder](boy-wonder/)
+
+**New in v1.8.9.1** — all ten themes have a bottom tab bar. On a touchscreen radio, long-press SQDash, choose **Full screen**, then tap **Performance**, **Essentials**, **Battery** or **Logbook**. The selected tab uses the theme’s accent. The three live pages can be switched in flight. Logbook opens when disarmed. Before configuring an arm source you can also explore the pages. EdgeTX sends widget touch events in full-screen mode. On a radio with physical controls, the existing page keys still cycle layouts while disarmed.
 
 **Grand Prix ’92 is Theme 10** in the shared dashboard. Its royal-blue, yellow and white cockpit takes inspiration from the 1992 Williams FW14B. The instrument cluster pairs amber speed digits with a calibrated 0–200 km/h arc and a red peak marker. The timer and GPS trace sit beside the dial. Essentials, Battery, Logbook and the four-stat disarm summary share the pit-wall layout. Theme 10 uses the radio’s drawing primitives and requires no artwork on the SD card.
 
 Boy Wonder is Theme 9. Tailor, Nocturne, APEX and the five classic themes are included in the same download.
 
-Version 1.8.9 fixes the startup error reported on the HelloRadioSky V15 at `main.lua:55`. The widget now uses the EdgeTX string functions directly when opening a model, drawing the instruments and reading saved flights. If you already installed v1.8.8, overwrite `WIDGETS/SQDash/main.lua` with the copy in the new ZIP and restart the radio. If the same error persists, rename `WIDGETS/SQDash/main.luac` to `main.luac.bak` if present and restart. EdgeTX can then compile the updated source. Your widget settings and existing flight journals use the same names.
+Version 1.8.9 fixed the startup error reported on the HelloRadioSky V15 at `main.lua:55`. The widget now uses the EdgeTX string functions directly when opening a model, drawing the instruments and reading saved flights. If you already installed v1.8.8, overwrite `WIDGETS/SQDash/main.lua` with the copy in the new ZIP and restart the radio. If the same error persists, rename `WIDGETS/SQDash/main.luac` to `main.luac.bak` if present and restart. EdgeTX can then compile the updated source. Your widget settings and existing flight journals use the same names.
 
 ## Install or upgrade
 
@@ -28,7 +30,7 @@ The radio follows your configured arm source. Disarming freezes the report until
 
 ## Records
 
-In full-screen widget view, press Enter or tap the disarm summary to open Logbook. Press Enter or tap again to review the newest flight. Next and Previous step through up to eight entries. Enter or tap returns to the overview. On the summary, a page key returns to the usual layout navigation. Re-arming always returns to live readings.
+In full-screen widget view, tap any bottom tab to leave the disarm summary. You can also press Enter or tap the body of the summary to open Logbook. Press Enter or tap again to review the newest flight. Next and Previous step through up to eight entries. Enter or tap returns to the overview. On the summary, a page key returns to the usual layout navigation. Re-arming always returns to live readings.
 
 **LogSD** defaults to on for a new widget. When upgrading an existing widget, turn it on in widget settings to keep flights after a restart. With LogSD off, flights remain available for the session. The summary shows the result of the SD save. Pending SD writes wait through a quick re-arm and resume while disarmed (up to eight queued flights).
 

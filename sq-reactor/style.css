@@ -37,10 +37,13 @@ h1 {font-family:'Arial Black',Arial,Helvetica,sans-serif;font-size:clamp(70px,10
 .cockpit-top .eyebrow {font-size:9px;margin-bottom:3px}
 .cockpit-top h2 {font-size:clamp(20px,2.2vw,29px);line-height:1.2}
 .screen-size,.engine-row,.hardware-foot {color:var(--dust);letter-spacing:.06em}
-.commandtabs {display:grid;grid-template-columns:repeat(4,1fr);border-block:1px solid var(--edge)}
-.commandtabs button {background:transparent;color:var(--dust);border:0;padding:13px 2px;font-size:13px;position:relative}
-.commandtabs button[aria-pressed=true] {color:#f4f3e9;background:#20221f}
-.commandtabs button[aria-pressed=true]::after {content:"";position:absolute;width:32px;height:2px;bottom:0;left:calc(50% - 16px);background:var(--gilt)}
+/* Native Lua paints the tab faces. These matching hit targets also support keyboards. */
+.lcd-surface{position:relative;width:min(100%,calc(65vh * var(--screen-ratio,1.7647)));margin-inline:auto}
+.lcd-surface canvas{width:100%;max-height:none;border:0}
+.lcd-tabs{position:absolute;inset:auto 0 0;height:var(--tab-height,0);display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.lcd-tabs button,.lcd-tabs button:hover,.lcd-tabs button:disabled{appearance:none;background:transparent;border:0;box-shadow:none;color:transparent;font-size:0;padding:0;border-radius:0}
+.lcd-tabs button:focus-visible{outline:2px dashed white;outline-offset:-4px;box-shadow:inset 0 0 0 5px #141826}
+
 .stage {padding:28px clamp(12px,8vw,110px);background:linear-gradient(115deg,#b28a5d 0 21%,#c49b6b 21% 53%,#d4b185 53% 76%,#caa378 76%)}
 .display-frame {margin:auto;background:#20221e;padding:12px 16px 8px;border:1px solid #11120f;border-radius:2px;box-shadow:0 9px 16px #33251744}
 .hardware-mark,.hardware-foot {font-size:8px;margin:0 1px 8px;color:#d9c6a9}
@@ -106,7 +109,7 @@ footer {color:var(--dust);padding:18px 0 30px;font-size:9px}
  .masthead nav a {margin-left:12px;font-size:12px}
  .wordmark {font-size:10px;gap:8px}
  .screen-size {font-size:9px;letter-spacing:0;white-space:nowrap}
- .commandtabs button,.primary,.secondary,.quiet {font-size:12px}
+ .primary,.secondary,.quiet {font-size:12px}
  .primary,.secondary,.quiet {padding:9px}
  .download-band,.settings-bottom,footer {flex-direction:column;align-items:flex-start;gap:12px}
  .settings-grid {gap:10px}

@@ -15,6 +15,7 @@ self.onmessage=({data})=>{
    },measure);
   }
   if(!draw)throw Error('Renderer not loaded');
-  draw();self.postMessage({commands,id:data.id});
+  const tabHeight=draw();
+  self.postMessage({commands,id:data.id,width:snapshot.width,height:snapshot.height,tabHeight});
  }catch(e){self.postMessage({error:String(e),id:data.id});}
 };

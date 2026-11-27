@@ -14,7 +14,8 @@ return function(_,source,emit,get,measure)
  local w=api.create({w=480,h=272},{ArmSrc=1,ArmHigh=1,Theme=6})
  return function()
   local function value(k) return get(nil,k) end
-  w.zone={w=value("width"),h=value("height")};w.last=env.getTime()
+  env.LCD_W,env.LCD_H=value("width"),value("height")
+  w.zone={w=env.LCD_W,h=env.LCD_H};w.last=env.getTime()
   for _,k in ipairs({"theme","mph","feet","page","aircraft","state","elapsed","flights","newBest","bestSpeed","bestTime","bestAmp","firstVolt","endVolt","total","totalTime","allSpeed","allPower","allTime","logStatus","gap","speedMissing","armUnknown","seenSafe","safeInput"}) do w[k]=value(k) end
   for _,k in ipairs({"theme","page","flights","total"}) do w[k]=math.floor(w[k]) end
   w.accent=lcd.RGB(value("r"),value("g"),value("b"));w.dim=lcd.RGB(29,57,64)
@@ -29,6 +30,6 @@ return function(_,source,emit,get,measure)
   w.comicPilot="pilot";w.landedAt=value("landedAt");w.previewStill=value("still")
   w.showSummary=value("showSummary");w.report=w.showSummary and w.recent[1] or nil
   local entry=value("entry");w.entry=entry and entry>0 and math.floor(entry) or nil
-  api.refresh(w,nil)
+  return api.refresh(w,0)
  end
 end

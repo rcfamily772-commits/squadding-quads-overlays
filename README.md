@@ -7,7 +7,7 @@
 
 Independent, Squadding Quads-owned copy of the V5 frosted-glass overlay prototype, reproduced with permission of the original author.
 
-[Squadding Quads FPV Dashboard v1.8.9 for colour EdgeTX radios](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
+[Squadding Quads FPV Dashboard v1.8.9.1 for colour EdgeTX radios](https://rcfamily772-commits.github.io/squadding-quads-overlays/sq-reactor/)
 
 ## Status
 

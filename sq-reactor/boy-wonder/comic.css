@@ -21,7 +21,7 @@
 .stage{background-color:var(--aqua);background-image:radial-gradient(#4facae 18%,transparent 21%);background-size:9px 9px;padding:22px clamp(10px,7vw,85px)}
 .display-frame{background:var(--paper);border:2px solid var(--paper);box-shadow:5px 5px 0 #5ea8a3}
 .hardware-mark,.hardware-foot{color:var(--black)}.hardware-mark{font-weight:800}
-.commandtabs button{font-weight:700}.commandtabs button[aria-pressed=true]{background:var(--paper);color:var(--sun)}.commandtabs button[aria-pressed=true]::after{background:var(--sun)}
+
 .download-band{margin-top:28px;border:3px solid var(--paper);background:var(--pop);padding:24px}
 .release-download{background:var(--paper);color:var(--black)}.download-actions a:not(.primary){text-decoration:underline}
 @media(max-width:720px){.masthead,main,footer{width:calc(100% - 28px)}.masthead{height:58px}.masthead nav a{margin-left:10px}.cover{display:flex;flex-direction:column;margin:14px 0 22px;align-items:stretch}.cover-copy{padding:22px}.cover h1{font-size:clamp(62px,13vw,84px);margin:16px 0}.cover h1>span{display:inline}.cover h1>span+span{margin-left:.12em}.cover-art{position:relative;inset:auto;height:clamp(140px,43vw,245px);clip-path:none;border-top:3px solid var(--paper)}.cover-art img{height:95%;width:auto;max-width:95%;object-fit:contain}.orbit{height:90%;width:auto}.cover-actions{margin-top:13px}.stage{padding:12px}.download-band{padding:16px}.cover-deck{max-width:48ch}}
